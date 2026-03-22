@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.5.2
+# DTL-Global Platform — Master Build Plan v2.5.3
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.5.2 — Cost optimization: S3-managed encryption, CloudWatch log retention, S3 lifecycle rules)
+> **Updated:** 2026-03-22 (v2.5.3 — Added Rule 013: Latest Constructs Only to prevent deprecated CDK usage)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
 | v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
 | v2.5.1 | **CDN stack correction**: CloudFront distribution serves **CLIENT websites** (e.g., `clientname.com`) added programmatically during onboarding — **NOT** DTL-Global's corporate site. No `dtl-global.org` domains in CDN stack. Corporate site stays on existing deployment. |
 | v2.5.0 | Phase 1 CDK: website S3 bucket in CDN stack with CloudFront **Origin Access Control (OAC)** (not legacy OAI + deprecated `S3Origin`); Storage stack holds 2 S3 buckets + 3 DynamoDB tables; **CodePipeline V2**; `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` on all stacks; `aws-cdk-lib>=2.180`, `constructs>=10.4`; **dtl-global.org**: corporate site may stay on a separate CDK app — registrar/NS changes only if you delegate DNS to this account |
@@ -109,7 +110,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 
 ## 1. Cursor Rules and Coding Standards
 
-### 1.1 Summary of 12 Rules
+### 1.1 Summary of 13 Rules
 
 | Rule | Name | What It Enforces |
 |------|------|-----------------|
@@ -125,6 +126,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 | 010 | Secrets Management | SSM Parameter Store (/dtl-global-platform/), never hardcode |
 | 011 | 100% Serverless | No EC2, no containers, no always-on compute |
 | 012 | GitFlow | Feature branches, issues, PRs, non-interactive CLI |
+| 013 | Latest Constructs Only | Never use deprecated CDK constructs, always use current best practices |
 
 ### 1.2 Cursor Skills
 
