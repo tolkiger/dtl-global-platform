@@ -643,7 +643,7 @@ READY TO ONBOARD — Switch Stripe to PRODUCTION
     WEBSITE_BUCKET=dtl-client-websites-{account_id}
     ASSETS_BUCKET=dtl-assets-{account_id}
     CSV_IMPORT_BUCKET=dtl-csv-imports-{account_id}
-    SES_FROM_EMAIL=onboarding@dtl-global.com
+    SES_FROM_EMAIL=onboarding@dtl-global.org
 
 ## Appendix B: Python Dependencies
 

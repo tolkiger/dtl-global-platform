@@ -36,7 +36,7 @@ class CdnStack(Stack):
             origin_access_identity: OAI created alongside the bucket to avoid cross-stack cycles.
             certificate: ACM certificate in ``us-east-1`` for CloudFront custom domains.
             hosted_zone: Route 53 hosted zone for DNS alias records.
-            website_alias: Full hostname served by CloudFront (for example ``www.dtl-global.com``).
+            website_alias: Full hostname served by CloudFront (for example ``www.dtl-global.org``).
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
         """
         super().__init__(scope, construct_id, **kwargs)  # Initialize CloudFormation stack

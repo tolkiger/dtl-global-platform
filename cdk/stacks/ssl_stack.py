@@ -26,7 +26,7 @@ class SslStack(Stack):
             scope: Parent construct (typically the CDK app).
             construct_id: Logical stack identifier.
             hosted_zone: Route 53 hosted zone used for DNS validation records.
-            domain_name: Apex domain (for example ``dtl-global.com``).
+            domain_name: Apex domain (for example ``dtl-global.org``).
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
         """
         super().__init__(scope, construct_id, **kwargs)  # Initialize CloudFormation stack

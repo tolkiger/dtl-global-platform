@@ -23,7 +23,7 @@ class DnsStack(Stack):
         Args:
             scope: Parent construct (typically the CDK app).
             construct_id: Logical stack identifier.
-            domain_name: Apex domain (for example ``dtl-global.com``).
+            domain_name: Apex domain (for example ``dtl-global.org``).
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
         """
         super().__init__(scope, construct_id, **kwargs)  # Initialize CloudFormation stack

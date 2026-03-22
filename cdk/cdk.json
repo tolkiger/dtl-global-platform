@@ -2,8 +2,8 @@
   "app": "python3 app.py",
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": true,
-    "githubOwner": "REPLACE_ME",
+    "githubOwner": "tolkiger",
     "githubRepo": "dtl-global-platform",
-    "domainName": "dtl-global.com"
+    "domainName": "dtl-global.org"
   }
 }

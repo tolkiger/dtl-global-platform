@@ -76,7 +76,7 @@ class ApiStack(Stack):
             "WEBSITE_BUCKET": website_bucket.bucket_name,  # Website bucket name
             "ASSETS_BUCKET": assets_bucket.bucket_name,  # Assets bucket name
             "CSV_IMPORT_BUCKET": csv_import_bucket.bucket_name,  # CSV import bucket name
-            "SES_FROM_EMAIL": "onboarding@dtl-global.com",  # Default SES sender per master plan
+            "SES_FROM_EMAIL": "onboarding@dtl-global.org",  # Default SES sender per master plan
         }  # End common environment dict
         rest_api = apigateway.RestApi(  # Public REST API for onboarding
             self,  # Parent construct is this stack

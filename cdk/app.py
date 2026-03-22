@@ -22,7 +22,7 @@ def main() -> None:
         account=os.environ.get("CDK_DEFAULT_ACCOUNT"),  # From AWS profile or CI
         region=os.environ.get("CDK_DEFAULT_REGION", "us-east-1"),  # Default to us-east-1 for CloudFront + ACM
     )  # End environment definition
-    domain_name = str(app.node.try_get_context("domainName") or "dtl-global.com")  # Apex domain for DNS + SES + CDN
+    domain_name = str(app.node.try_get_context("domainName") or "dtl-global.org")  # Apex domain for DNS + SES + CDN
     github_owner = str(app.node.try_get_context("githubOwner") or "REPLACE_ME")  # GitHub namespace for CodeStar source
     github_repo = str(app.node.try_get_context("githubRepo") or "dtl-global-platform")  # Repository name for pipeline source
     storage = StorageStack(app, "DtlStorage", env=env)  # Data plane tables and buckets

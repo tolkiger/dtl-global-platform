@@ -23,7 +23,7 @@ class EmailStack(Stack):
         Args:
             scope: Parent construct (typically the CDK app).
             construct_id: Logical stack identifier.
-            domain_name: Apex domain used for SES domain verification (for example ``dtl-global.com``).
+            domain_name: Apex domain used for SES domain verification (for example ``dtl-global.org``).
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
 
         Note:

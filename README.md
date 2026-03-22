@@ -2,6 +2,8 @@
 
 AI-powered client onboarding platform for DTL-Global technology consulting.
 
+**Official website domain:** [dtl-global.org](https://dtl-global.org). Transactional email uses `onboarding@dtl-global.org` (see `DTL_MASTER_PLAN.md` Appendix A).
+
 ## Overview
 
 This platform automates the process of onboarding small and medium business clients with:

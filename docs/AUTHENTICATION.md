@@ -2,6 +2,8 @@
 
 This guide matches **DTL_MASTER_PLAN.md** (bootstrap Section 0.5, Phase 0.5, Appendix C). Use **`.env` locally** (never committed) and **AWS SSM Parameter Store** (`/dtl-global-platform/...`) for Lambdas.
 
+**Production domain:** **dtl-global.org**. Default SES sender for Lambdas: **`onboarding@dtl-global.org`** (see Appendix A in the master plan).
+
 ---
 
 ## HubSpot — token and hubspotcli MCP
