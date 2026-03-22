@@ -95,6 +95,13 @@ class ApiStack(Stack):
         for route_path, module_suffix in _HANDLER_ROUTE_SPECS:  # Create one Lambda + route per handler
             handler_id = f"handler_{module_suffix}"  # Python module name without .py
             function_name = f"dtl-onboarding-{module_suffix.replace('_', '-')}"  # AWS Lambda function name
+            log_group = logs.LogGroup(  # Explicit log group with retention for cost optimization
+                self,  # Parent construct is this stack
+                f"LogGroup{module_suffix.title().replace('_', '')}",  # Stable logical id per handler log group
+                log_group_name=f"/aws/lambda/{function_name}",  # Standard Lambda log group naming convention
+                retention=logs.RetentionDays.ONE_MONTH,  # 30-day log retention for cost optimization
+                removal_policy=RemovalPolicy.DESTROY,  # Allow log group cleanup when stack is deleted
+            )  # End log group definition
             lambda_function = lambda_.Function(  # Python 3.12 function with shared code bundle
                 self,  # Parent construct is this stack
                 f"Lambda{module_suffix.title().replace('_', '')}",  # Stable logical id per handler
@@ -105,7 +112,7 @@ class ApiStack(Stack):
                 memory_size=256,  # Memory size per master plan baseline
                 environment=common_environment,  # Inject shared configuration
                 function_name=function_name,  # Predictable name in the Lambda console
-                log_retention=logs.RetentionDays.ONE_MONTH,  # Temporary: use deprecated parameter to avoid conflicts
+                log_group=log_group,  # Use explicit log group instead of deprecated log_retention
             )  # End Lambda function definition
             templates_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for templates
             clients_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for clients
