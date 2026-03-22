@@ -31,6 +31,9 @@ def _load_secret_key() -> str:
     if not key:  # Missing configuration
         print("ERROR: STRIPE_SECRET_KEY is not set.")  # Explain failure
         raise SystemExit(1)  # Abort verification
+    if key.startswith("sk_live_"):  # Refuse live keys explicitly in verify path
+        print("FAIL: Stripe live keys (sk_live_) are not allowed for Phase 0 verification. Use sk_test_.")  # Match plan §7.2
+        raise SystemExit(1)  # Abort before catalog checks
     if not key.startswith("sk_test_"):  # Phase 0 verify requires test keys only
         print(  # Match setup script safety messaging
             "FAIL: Stripe key must be a test key (sk_test_) for Phase 0 verification."
