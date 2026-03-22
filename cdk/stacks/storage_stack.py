@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from aws_cdk import Duration, RemovalPolicy, Stack, Tags  # CDK core helpers
-from aws_cdk import aws_cloudfront as cloudfront  # CloudFront OAI for private S3 reads
 from aws_cdk import aws_dynamodb as dynamodb  # DynamoDB table constructs
 from aws_cdk import aws_s3 as s3  # S3 bucket constructs
 from constructs import Construct  # Base construct class
@@ -26,7 +25,7 @@ class StorageStack(Stack):
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
         """
         super().__init__(scope, construct_id, **kwargs)  # Initialize CloudFormation stack
-        account_id = Stack.of(self).account  # Resolve AWS account for unique bucket names
+        account_id = Stack.of(self).account  # Resolve AWS account for unique bucket names (used for S3 names)
         self.templates_table = dynamodb.Table(  # Industry templates metadata
             self,  # Parent construct is this stack
             "IndustryTemplatesTable",  # Logical id inside the template
@@ -60,22 +59,6 @@ class StorageStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,  # On-demand capacity
             removal_policy=RemovalPolicy.RETAIN,  # Protect workflow state
         )  # End state table definition
-        self.website_bucket = s3.Bucket(  # Hosted client static sites
-            self,  # Parent construct is this stack
-            "ClientWebsitesBucket",  # Logical id inside the template
-            bucket_name=f"dtl-client-websites-{account_id}",  # Globally unique bucket name
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,  # CloudFront OAI only
-            encryption=s3.BucketEncryption.S3_MANAGED,  # Server-side encryption at rest
-            enforce_ssl=True,  # Deny plain HTTP requests
-            versioned=False,  # Versioning optional; keep costs predictable for Phase 1
-            removal_policy=RemovalPolicy.RETAIN,  # Avoid deleting client sites accidentally
-        )  # End website bucket definition
-        self.website_origin_access_identity = cloudfront.OriginAccessIdentity(  # OAI colocated with bucket policy
-            self,  # Parent construct is this stack
-            "WebsiteOriginAccessIdentity",  # Logical id inside the template
-            comment="OAI for DTL client website bucket",  # Human-readable description
-        )  # End OAI definition
-        self.website_bucket.grant_read(self.website_origin_access_identity)  # Allow CloudFront to read website objects
         self.assets_bucket = s3.Bucket(  # Shared assets (logos, uploads)
             self,  # Parent construct is this stack
             "AssetsBucket",  # Logical id inside the template

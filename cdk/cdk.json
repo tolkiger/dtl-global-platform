@@ -1,5 +1,9 @@
 {
   "app": "python3 app.py",
+  "versionReporting": false,
+  "analyticsReporting": false,
+  "telemetryDisabled": true,
+  "telemetry": false,
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": true,
     "githubOwner": "tolkiger",

@@ -71,10 +71,11 @@ class PipelineStack(Stack):
             project=build_project,  # CodeBuild project to execute
             input=source_artifact,  # Use the GitHub checkout as input
         )  # End build action
-        codepipeline.Pipeline(  # Top-level pipeline with two stages
+        codepipeline.Pipeline(  # Top-level pipeline with two stages (V2: recommended execution model)
             self,  # Parent construct is this stack
             "DtlDeploymentPipeline",  # Logical id inside the template
             pipeline_name="dtl-global-platform-deploy",  # Console-visible pipeline name
+            pipeline_type=codepipeline.PipelineType.V2,  # Explicit V2 to avoid implicit V1 and match current defaults
             stages=[  # Ordered pipeline stages
                 codepipeline.StageProps(  # Source stage
                     stage_name="Source",  # Human-readable stage name

@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.4.1
+# DTL-Global Platform — Master Build Plan v2.5.1
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.4.1 — SSM paths: /dtl-global-platform/{param})
+> **Updated:** 2026-03-22 (v2.5.1 — CDN stack clarified: serves CLIENT websites only, not DTL-Global corporate site)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,8 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.5.1 | **CDN stack correction**: CloudFront distribution serves **CLIENT websites** (e.g., `clientname.com`) added programmatically during onboarding — **NOT** DTL-Global's corporate site. No `dtl-global.org` domains in CDN stack. Corporate site stays on existing deployment. |
+| v2.5.0 | Phase 1 CDK: website S3 bucket in CDN stack with CloudFront **Origin Access Control (OAC)** (not legacy OAI + deprecated `S3Origin`); Storage stack holds 2 S3 buckets + 3 DynamoDB tables; **CodePipeline V2**; `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` on all stacks; `aws-cdk-lib>=2.180`, `constructs>=10.4`; **dtl-global.org**: corporate site may stay on a separate CDK app — registrar/NS changes only if you delegate DNS to this account |
 | v2.4.1 | SSM parameter paths changed from /dtl/{param} to /dtl-global-platform/{param} to match repo naming convention |
 | v2.4 | Removed MCP json from bootstrap; added docs/AUTHENTICATION.md; Stripe sandbox-first; SSM setup script; GitFlow Rule 012 + skill; GitHub Project + Issues per phase; Friends and Family pricing; updated progress |
 | v2.3 | HubSpot developer platform 2025.2 project + static auth |
@@ -28,8 +30,8 @@
 | Bootstrap (Section 0) | Done |
 | HubSpot Phase 0 | Done — verify ALL CHECKS PASSED |
 | Stripe Phase 0 | Confirm — run phase0_stripe_setup / verify (SANDBOX mode) |
-| AWS SSM (Phase 0.5) | Not done — run scripts/setup_ssm_parameters.py |
-| Phase 1 (CDK) | Not started |
+| AWS SSM (Phase 0.5) | Done — setup + verify scripts |
+| Phase 1 (CDK) | Implemented — `cdk deploy` / verify resources (see Section 9) |
 | Phases 2-6 | Not started |
 
 ---
@@ -347,15 +349,27 @@ Create GitHub Issue, then feature branch from main.
 
 Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
 
-### 9.3 What Gets Created
+### 9.3 What Gets Created (seven stacks)
 
-Storage Stack: 3 DynamoDB tables + 3 S3 buckets
-API Stack: API Gateway (12 endpoints) + 12 Lambda functions (Python 3.12, 256MB, 5min)
-CDN Stack: CloudFront OAI
-DNS Stack: DTL-Global hosted zone only
-Email Stack: SES sender verification
-SSL Stack: ACM base config
-Pipeline Stack: CodePipeline using EXISTING CodeStar connection
+| Stack | Resources |
+|-------|-----------|
+| **Storage** | 3 DynamoDB tables (`dtl-industry-templates`, `dtl-clients`, `dtl-onboarding-state`) + **2** S3 buckets (`dtl-assets-{account}`, `dtl-csv-imports-{account}`) |
+| **CDN** | **Client websites** S3 bucket (`dtl-client-websites-{account}`) + **CloudFront** distribution using **S3 Origin Access Control (OAC)** — serves **client sites** (e.g., `clientname.com`) added programmatically during onboarding, **NOT** DTL-Global corporate domains |
+| **DNS** | Route 53 **public hosted zone** for `dtl-global.org` (ACM DNS validation records only — **no** `www` alias to CloudFront since corporate site is separate) |
+| **SSL** | ACM certificate (DNS validation in the hosted zone) |
+| **Email** | SES domain identity for `dtl-global.org` |
+| **API** | API Gateway REST (12 POST routes) + 12 Lambda functions (Python 3.12, 256MB, 5min) |
+| **Pipeline** | CodePipeline **V2** + CodeBuild (`buildspec.yml`), source = GitHub via **existing** CodeStar connection |
+
+**Why the website bucket lives in the CDN stack:** CDK `S3BucketOrigin.with_origin_access_control(bucket)` ties bucket policy to the CloudFront distribution. Putting the bucket and distribution in **one** stack avoids a cyclic dependency between Storage and CDN stacks.
+
+**CDK app conventions (`cdk/app.py`):** Every stack uses `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` so templates do not add the bootstrap-version SSM rule (operator preference after bootstrap).
+
+### 9.3a dtl-global.org — corporate site vs this platform
+
+The **public marketing website** at **dtl-global.org** may already be live and deployed by a **different CDK application** (another repo). In that case you do **not** need to change the **domain registrar** or nameservers for the sake of this platform: DNS for the apex can keep pointing at whatever currently serves that site.
+
+This repo’s **Route 53 hosted zone** and records (e.g. `www` → client-site CloudFront, ACM validation) are for **onboarding platform** infrastructure. If you keep apex DNS at another provider, add the **same** records there (ACM CNAMEs, `www` alias/CNAME) or delegate a **subdomain** (e.g. `platform.dtl-global.org`) to this account’s zone instead of moving the whole domain.
 
 ### 9.4 Lambda Environment Variables (referencing SSM)
 
@@ -370,9 +384,9 @@ Pipeline Stack: CodePipeline using EXISTING CodeStar connection
 [ ] Feature branch created from main
 [ ] cdk deploy --all succeeds
 [ ] All DynamoDB tables exist
-[ ] All S3 buckets exist (including csv-imports)
+[ ] All S3 buckets exist: `dtl-client-websites-{account}` (CDN stack), `dtl-assets-{account}`, `dtl-csv-imports-{account}` (Storage stack)
 [ ] API Gateway exists with 12 endpoints
-[ ] CodePipeline uses EXISTING CodeStar
+[ ] CodePipeline **V2** uses EXISTING CodeStar connection (SSM ARN)
 [ ] SES sender verified
 [ ] NO non-serverless resources
 [ ] All commits reference issue number
@@ -452,18 +466,20 @@ Features: bid generation, SEO website prompts, custom request estimation, templa
 
 Flow: GitHub repo to S3 to CloudFront to ACM cert to Route 53 to HTTPS live
 
-Three domain scenarios:
-A: New domain (Route 53 register $14)
-B: Existing domain elsewhere (point NS to Route 53)
-C: Already on Route 53 (use existing zone)
+**IMPORTANT:** Phase 4 automates **CLIENT** websites and custom domains for onboarding customers (e.g., `clientname.com`). DTL-Global's **corporate** site at **dtl-global.org** remains on its existing deployment (Section 9.3a) and is **not** affected by this automation.
+
+**Client domain scenarios** (for customer websites, not DTL-Global):
+A: **New client domain** (client registers, points DNS to CloudFront)
+B: **Existing client domain** elsewhere (client updates DNS to point to CloudFront)
+C: **Client domain on Route 53** (programmatically add alias records)
 
 ### Phase 4 Gate
 
 [ ] GitHub Issue + feature branch
-[ ] Test site deploys GitHub to S3
-[ ] CloudFront serves site, SSL attached
-[ ] HTTPS works on custom domain
-[ ] All 3 domain scenarios handled
+[ ] Test **client** site deploys GitHub to S3
+[ ] CloudFront serves **client** site, SSL attached for **client** domain
+[ ] HTTPS works on **client** custom domain (not DTL-Global domains)
+[ ] All 3 **client** domain scenarios handled
 [ ] PR merged to main
 
 ---
@@ -605,7 +621,7 @@ PROCEED TO PHASE 1
 PHASE 1 — CDK Infrastructure
 [ ] Issue + branch created
 [ ] cdk deploy --all succeeds
-[ ] All resources exist, CodePipeline uses CodeStar
+[ ] Section 9.3 resources exist (Storage + CDN + DNS + SSL + Email + API + Pipeline); CodePipeline **V2** + CodeStar
 [ ] 100% serverless, PR merged
 PROCEED TO PHASE 2
 
@@ -648,8 +664,8 @@ READY TO ONBOARD — Switch Stripe to PRODUCTION
 ## Appendix B: Python Dependencies
 
 CDK (cdk/requirements.txt):
-  aws-cdk-lib>=2.100.0
-  constructs>=10.0.0
+  aws-cdk-lib>=2.180.0
+  constructs>=10.4.0
 
 Lambda Layer (engine/requirements.txt):
   hubspot-api-client>=9.0.0
@@ -686,4 +702,4 @@ Naming convention matches the repository name: dtl-global-platform.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.4.1*
+*End of DTL-Global Platform Master Build Plan v2.5.1*

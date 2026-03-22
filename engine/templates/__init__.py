@@ -1,0 +1,1 @@
+# DTL-Global Platform industry templates module
