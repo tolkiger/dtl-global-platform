@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.5.3
+# DTL-Global Platform — Master Build Plan v2.5.4
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.5.3 — Added Rule 013: Latest Constructs Only to prevent deprecated CDK usage)
+> **Updated:** 2026-03-22 (v2.5.4 — CRITICAL: Fixed DNS to use platform.dtl-global.org subdomain, prevents corporate site conflicts)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.5.4 | **CRITICAL DNS fix**: Changed domain from `dtl-global.org` to `platform.dtl-global.org` subdomain to avoid conflicts with existing corporate site DNS; prevents email disruption and follows master plan Section 9.3a |
 | v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
 | v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
 | v2.5.1 | **CDN stack correction**: CloudFront distribution serves **CLIENT websites** (e.g., `clientname.com`) added programmatically during onboarding — **NOT** DTL-Global's corporate site. No `dtl-global.org` domains in CDN stack. Corporate site stays on existing deployment. |
@@ -374,9 +375,9 @@ Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
 |-------|-----------|
 | **Storage** | 3 DynamoDB tables (`dtl-industry-templates`, `dtl-clients`, `dtl-onboarding-state`) + **2** S3 buckets (`dtl-assets-{account}`, `dtl-csv-imports-{account}`) |
 | **CDN** | **Client websites** S3 bucket (`dtl-client-websites-{account}`) + **CloudFront** distribution using **S3 Origin Access Control (OAC)** — serves **client sites** (e.g., `clientname.com`) added programmatically during onboarding, **NOT** DTL-Global corporate domains |
-| **DNS** | Route 53 **public hosted zone** for `dtl-global.org` (ACM DNS validation records only — **no** `www` alias to CloudFront since corporate site is separate) |
+| **DNS** | Route 53 **public hosted zone** for `platform.dtl-global.org` subdomain (ACM DNS validation records only — does **NOT** interfere with existing `dtl-global.org` corporate site) |
 | **SSL** | ACM certificate (DNS validation in the hosted zone) |
-| **Email** | SES domain identity for `dtl-global.org` |
+| **Email** | SES domain identity for `platform.dtl-global.org` subdomain |
 | **API** | API Gateway REST (12 POST routes) + 12 Lambda functions (Python 3.12, 256MB, 5min) |
 | **Pipeline** | CodePipeline **V2** + CodeBuild (`buildspec.yml`), source = GitHub via **existing** CodeStar connection |
 
@@ -678,7 +679,7 @@ READY TO ONBOARD — Switch Stripe to PRODUCTION
     WEBSITE_BUCKET=dtl-client-websites-{account_id}
     ASSETS_BUCKET=dtl-assets-{account_id}
     CSV_IMPORT_BUCKET=dtl-csv-imports-{account_id}
-    SES_FROM_EMAIL=onboarding@dtl-global.org
+    SES_FROM_EMAIL=onboarding@platform.dtl-global.org
 
 ## Appendix B: Python Dependencies
 
