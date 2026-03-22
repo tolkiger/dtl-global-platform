@@ -1,0 +1,103 @@
+---
+description: DTL-Global Platform Build Rules — All coding standards and constraints
+globs: ["**/*.py", "**/*.json", "**/*.md", "**/*.yaml", "**/*.yml"]
+alwaysApply: true
+---
+
+## Project Context
+
+You are building the DTL-Global AI-powered client onboarding platform.
+The single source of truth is DTL_MASTER_PLAN.md in the project root.
+Read it BEFORE writing any code. Every decision must align with that plan.
+
+## MANDATORY RULES — NEVER VIOLATE THESE
+
+### Rule 001: Google Docstring Format
+All Python functions and classes MUST use Google-style docstrings.
+Include: description, Args, Returns, Raises (where applicable).
+
+### Rule 002: Comment Every Line
+Every meaningful line of code MUST have an inline comment explaining what it does.
+Group related lines under a block comment if they perform one logical step.
+Goal: Gerardo can read any file and understand it without external docs.
+
+### Rule 003: No Over-Engineering
+Do NOT add:
+- AWS services not listed in DTL_MASTER_PLAN.md Section 3
+- Extra abstractions, design patterns, or frameworks
+- Monitoring/observability tools (basic CloudWatch Lambda logs are fine)
+- Docker, ECS, EKS, Fargate, EC2, or any container/compute services
+- Step Functions, EventBridge, SQS, SNS unless explicitly in the plan
+- ANY always-on compute — this is 100% SERVERLESS
+
+### Rule 004: Clean Up Obsolete Files
+When a phase is complete or a file is replaced:
+- Delete obsolete .md planning files created during development
+- Delete scratch/temp files
+- Keep only: source code, tests, config files, DTL_MASTER_PLAN.md, README.md, docs/AUTHENTICATION.md
+
+### Rule 005: Python Only
+- All backend code: Python 3.12+
+- All CDK code: Python
+- All Lambda functions: Python
+- All scripts: Python
+- No TypeScript, no JavaScript backend
+
+### Rule 006: Do Not Deviate From the Plan
+Before creating any new file or service:
+1. Check DTL_MASTER_PLAN.md to confirm it is listed
+2. If not listed, ASK Gerardo before proceeding
+3. Never add nice to have features
+
+### Rule 007: Phase Gate Enforcement
+Do NOT start a new phase until the current phase gate checklist
+(DTL_MASTER_PLAN.md Section 19) is fully satisfied.
+
+### Rule 008: File Naming Conventions
+- Python files: snake_case (e.g., hubspot_setup.py)
+- CDK stacks: snake_case with _stack suffix (e.g., api_stack.py)
+- Lambda handlers: handler_{function_name}.py
+- Tests: test_{module_name}.py
+- Templates: {industry}_template.json
+
+### Rule 009: Error Handling
+All API calls (HubSpot, Stripe, AWS, AI) MUST have:
+- try/except blocks with specific exception types
+- Meaningful error messages including the operation that failed
+- Graceful degradation (do not crash the whole onboarding if one step fails)
+- Print statements for debugging (no logging frameworks)
+
+### Rule 010: Secrets Management
+- All API keys/secrets in AWS SSM Parameter Store (SecureString)
+- NEVER hardcode secrets in source code
+- Lambda uses env vars that reference SSM parameters
+- .env files for LOCAL dev only, MUST be in .gitignore
+
+### Rule 011: 100% Serverless
+No exceptions. No EC2, no containers, no always-on compute.
+Everything runs on Lambda, triggered by API Gateway or events.
+Data in DynamoDB and S3 only.
+
+### Rule 012: GitFlow (MANDATORY for every phase)
+Before starting ANY phase (Phase 1 onward):
+1. Ensure a GitHub Project exists for dtl-global-platform (create once, reuse)
+2. Create a GitHub Issue describing the phase work
+3. Create a feature branch from main: feature/{issue-number}-phase-{N}-{short-description}
+4. Make granular commits for each task within the phase
+5. When phase is complete and all tests pass, push the feature branch
+6. Create a Pull Request with phase summary (use --body flag, NOT interactive editor)
+7. Merge the PR to main (use gh pr merge --squash --delete-branch --yes)
+8. NEVER use CLI commands that wait for user input (no interactive editors, no prompts)
+9. All git/gh commands must be non-interactive (use flags: --yes, --body, -m, etc.)
+
+## Approved AWS Services (ONLY THESE)
+Lambda, API Gateway (REST), DynamoDB, S3, CloudFront, Route 53, ACM, SES,
+SSM Parameter Store, CodePipeline, CodeBuild, CloudWatch Logs (auto).
+
+## Approved External APIs
+HubSpot CRM API (Bearer token from developer platform 2025.2 static-auth app in `hubspot/dtl-global-platform-app/`; see docs/AUTHENTICATION.md),
+Stripe API (Python SDK), Stripe Connect,
+Anthropic Claude API (Direct — Haiku 4.5), Google Workspace Admin API (future).
+
+## When Unsure
+If the plan does not cover something, ASK Gerardo — do not assume or add features.
