@@ -7,7 +7,6 @@ from aws_cdk import aws_codebuild as codebuild  # CodeBuild project for CDK depl
 from aws_cdk import aws_codepipeline as codepipeline  # CodePipeline service
 from aws_cdk import aws_codepipeline_actions as codepipeline_actions  # Pipeline action helpers
 from aws_cdk import aws_iam as iam  # IAM roles for CodeBuild
-from aws_cdk import aws_ssm as ssm  # Read CodeStar connection ARN from SSM
 from constructs import Construct  # Base construct class
 
 
@@ -21,6 +20,7 @@ class PipelineStack(Stack):
         *,
         github_owner: str,
         github_repo: str,
+        connection_arn: str,
         **kwargs: object,
     ) -> None:
         """Create a source->build pipeline for this repository.
@@ -30,13 +30,10 @@ class PipelineStack(Stack):
             construct_id: Logical stack identifier.
             github_owner: GitHub owner or organization (must match the CodeStar connection).
             github_repo: GitHub repository name (without ``.git``).
+            connection_arn: CodeStar connection ARN for GitHub integration.
             **kwargs: Passed through to ``Stack`` (env, stackName, etc.).
         """
         super().__init__(scope, construct_id, **kwargs)  # Initialize CloudFormation stack
-        connection_arn = ssm.StringParameter.value_for_string_parameter(  # Resolve ARN at deploy time
-            self,  # Scope for the dynamic reference
-            "/dtl-global-platform/github/codestar_connection_arn",  # Master plan SSM path
-        )  # End value_for_string_parameter call
         source_artifact = codepipeline.Artifact("SourceArtifact")  # Source checkout output
         source_action = codepipeline_actions.CodeStarConnectionsSourceAction(  # GitHub source via CodeStar
             action_name="GitHub_Source",  # Stage action name

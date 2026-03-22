@@ -29,6 +29,11 @@ def main() -> None:
     domain_name = str(app.node.try_get_context("domainName") or "dtl-global.org")  # Apex domain for DNS + SES + CDN
     github_owner = str(app.node.try_get_context("githubOwner") or "REPLACE_ME")  # GitHub namespace for CodeStar source
     github_repo = str(app.node.try_get_context("githubRepo") or "dtl-global-platform")  # Repository name for pipeline source
+    connection_arn = str(  # CodeStar connection ARN for GitHub integration
+        os.environ.get("CODESTAR_CONNECTION_ARN") or  # Environment variable takes precedence
+        app.node.try_get_context("connectionArn") or  # Fall back to CDK context
+        "REPLACE_WITH_YOUR_CODESTAR_CONNECTION_ARN"  # Default placeholder
+    )  # End connection ARN resolution
     storage = StorageStack(app, "DtlStorage", env=env, synthesizer=synthesizer)  # Data plane tables and buckets
     dns = DnsStack(app, "DtlDns", env=env, synthesizer=synthesizer, domain_name=domain_name)  # Public hosted zone for DNS validation
     ssl = SslStack(  # TLS certificate for CloudFront and future HTTPS endpoints
@@ -68,6 +73,7 @@ def main() -> None:
         synthesizer=synthesizer,  # Same synthesizer as sibling stacks
         github_owner=github_owner,  # GitHub owner for CodeStar source action
         github_repo=github_repo,  # GitHub repo for CodeStar source action
+        connection_arn=connection_arn,  # CodeStar connection ARN from context
     )  # End pipeline stack
     app.synth()  # Emit CloudFormation templates to cdk.out
 
