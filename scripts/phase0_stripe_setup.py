@@ -40,8 +40,11 @@ def _load_secret_key() -> str:
     if not key:  # Guard missing configuration
         print("ERROR: STRIPE_SECRET_KEY is not set. Copy .env.example to .env and export variables.")  # Help text
         raise SystemExit(1)  # Abort early
-    if not key.startswith("sk_test_"):  # Refuse live or unknown key prefixes for Phase 0 safety
-        print(  # Exact operator-facing error for non-test keys
+    if key.startswith("sk_live_"):  # Explicit refusal of production keys per DTL_MASTER_PLAN.md §7.2
+        print("ERROR: This script refuses Stripe live keys (sk_live_). Use SANDBOX keys (sk_test_) only.")  # Clear operator message
+        raise SystemExit(1)  # Abort before any Stripe API calls
+    if not key.startswith("sk_test_"):  # Refuse any non-test secret (restricted keys, typos, etc.)
+        print(  # Operator-facing error for non-sandbox keys
             "ERROR: This script only runs with Stripe SANDBOX/TEST keys (sk_test_). "
             "Refusing to run with live keys."
         )  # End safety message
