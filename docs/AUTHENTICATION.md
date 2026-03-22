@@ -1,97 +1,99 @@
 # Authentication and MCP setup — DTL-Global Platform
 
-This document describes how to configure authentication for local development, MCP tooling, and production. Secrets belong in **`.env` locally** (never committed) and **AWS SSM Parameter Store** for Lambda (`DTL_MASTER_PLAN.md`).
+This guide matches **DTL_MASTER_PLAN.md** (bootstrap Section 0.5, Phase 0.5, Appendix C). Use **`.env` locally** (never committed) and **AWS SSM Parameter Store** (`/dtl-global-platform/...`) for Lambdas.
 
 ---
 
-## 1. HubSpot
+## HubSpot — token and hubspotcli MCP
 
-### Private App / static token
+| Topic | Detail |
+|--------|--------|
+| **Token** | **Private App** or developer-platform **static auth** token — CRM REST API Bearer token. Repo app: `hubspot/dtl-global-platform-app/` (upload → install → **Auth** tab). |
+| **Local env** | `HUBSPOT_ACCESS_TOKEN` — see `.env.example`. |
 
-DTL uses HubSpot CRM APIs with a **Bearer token** from your HubSpot app (developer platform project with static auth in `hubspot/dtl-global-platform-app/`, or a **Private App** token if you use that path for REST access). See that app’s **Auth** tab after install, or **Settings → Integrations → Private Apps** if using a private app.
+### HubSpot CLI (`@hubspot/cli`)
 
-1. Create or open the app and ensure required CRM scopes are granted.
-2. Copy the **access token** (Private App token or static auth token).
-3. Set locally: `HUBSPOT_ACCESS_TOKEN=<token>` in `.env` (see `.env.example`).
+1. Install: `npm install -g @hubspot/cli`
+2. Authenticate: `hs auth` (follow prompts; use a Personal Access Key from HubSpot if needed)
+3. Enable MCP for IDE tooling: `hs mcp enable`
+4. Restart **Cursor** so it picks up the HubSpot MCP server
 
-### HubSpot CLI and MCP (hubspotcli)
-
-1. **Install** the HubSpot CLI globally:  
-   `npm install -g @hubspot/cli`
-2. **Authenticate:**  
-   `hs auth`  
-   Follow the prompts to link your HubSpot account (or use account-specific auth per [HubSpot CLI docs](https://developers.hubspot.com/docs/api/developer-tools-overview)).
-3. **Enable MCP:**  
-   `hs mcp enable`  
-   This exposes HubSpot MCP for local tooling.
-4. **Cursor:** Restart Cursor after enabling MCP so it can detect the HubSpot MCP server.
+Python scripts and Lambdas use the **HubSpot API** with the token above; MCP is for IDE exploration only (`DTL_MASTER_PLAN.md` Section 5).
 
 ---
 
-## 2. Stripe (SANDBOX / TEST first)
+## Stripe — SANDBOX keys, Cursor MCP, production switch
 
-Use **test mode** keys only (`sk_test_...`) until you intentionally move to production.
+| Topic | Detail |
+|--------|--------|
+| **Phase 0 scripts** | Use **test mode** secret keys only: `sk_test_...` |
+| **Never** | Run setup scripts or store **`sk_live_`** in SSM until you intentionally go live (`DTL_MASTER_PLAN.md` Section 4) |
 
-### API keys (local scripts)
+### Local `.env`
 
-1. Open [Stripe Dashboard](https://dashboard.stripe.com/) → **Developers → API keys**.
-2. Ensure **Test mode** is on.
-3. Reveal the **Secret key** (`sk_test_...`) and set `STRIPE_SECRET_KEY` in `.env`.
-4. For Connect, set `STRIPE_CONNECT_CLIENT_ID` from **Connect → Settings** when applicable.
+1. [Stripe Dashboard](https://dashboard.stripe.com/) → enable **Test mode**
+2. **Developers → API keys** → Secret key (`sk_test_...`) → `STRIPE_SECRET_KEY`
+3. **Connect → Settings** → Connect client id → `STRIPE_CONNECT_CLIENT_ID` if used
 
 ### Stripe MCP (Cursor native)
 
-1. Open **Cursor Settings → MCP**.
-2. **Add Stripe** (native integration).
-3. Authenticate using your **TEST** secret key (`sk_test_...`).
+1. **Cursor Settings → MCP**
+2. Add **Stripe** (native integration)
+3. Authenticate with a **TEST** secret key (`sk_test_...`) only
 
-### Switching to production
+### Switching SANDBOX → production
 
-1. Obtain **`sk_live_`** keys from Stripe Dashboard (**Live mode** → **Developers → API keys**).
-2. Store the live secret in SSM (example — adjust profile/region as needed):
+1. Obtain **`sk_live_...`** from Dashboard (**Live mode** → **Developers → API keys**).
+2. Put the live secret in SSM (adjust profile/region as needed):
 
    ```bash
-   aws ssm put-parameter --name "/dtl/stripe/secret" --value "sk_live_xxx" --type SecureString --overwrite
+   aws ssm put-parameter \
+     --name "/dtl-global-platform/stripe/secret" \
+     --value "sk_live_xxx" \
+     --type SecureString \
+     --overwrite
    ```
 
-3. **Redeploy** application stacks so Lambdas pick up the updated parameter (e.g. `cdk deploy` for your CDK app).
-4. Rotate keys carefully; update SSM and redeploy whenever keys change.
+3. Redeploy infrastructure so Lambdas read the updated parameter (e.g. `cdk deploy`).
+4. Rotate keys in Stripe and SSM together when you rotate credentials.
 
 ---
 
-## 3. Anthropic (Claude)
+## Anthropic (Claude)
 
-1. Open [Anthropic Console](https://console.anthropic.com/).
-2. Create an API key under your account.
-3. Set `ANTHROPIC_API_KEY` in `.env` for local use, and store the same value in SSM for production Lambdas (see parameters below).
-
----
-
-## 4. AWS SSM Parameter Store
-
-These parameters hold secrets and configuration for serverless workloads. **Do not commit values.** Use `scripts/setup_ssm_parameters.py` and `scripts/verify_ssm_parameters.py` to manage and check them.
-
-| Parameter name | Purpose |
-|----------------|---------|
-| `/dtl/hubspot/token` | HubSpot CRM Bearer token |
-| `/dtl/stripe/secret` | Stripe secret key (**must be `sk_test_` until production**; then `sk_live_` when approved) |
-| `/dtl/stripe/connect_client_id` | Stripe Connect client identifier |
-| `/dtl/anthropic/api_key` | Anthropic API key |
-| `/dtl/github/codestar_connection_arn` | AWS CodeStar Connections ARN for GitHub |
+1. Create an API key at [console.anthropic.com](https://console.anthropic.com/)
+2. Local: `ANTHROPIC_API_KEY` in `.env`
+3. Production: store under SSM path below; Lambdas resolve via env param reference (`DTL_MASTER_PLAN.md` Section 9.4)
 
 ---
 
-## 5. GitHub
+## AWS SSM Parameter Store (`/dtl-global-platform/`)
 
-- **`gh` CLI:** Install and run `gh auth login` once so `gh` is authenticated for issues, PRs, and projects.
-- **CodeStar connection:** The GitHub ↔ AWS connection ARN is stored at `/dtl/github/codestar_connection_arn` in SSM for pipelines (create the connection in AWS Console → Developer Tools → Connections, then save the ARN in SSM).
+All five parameters are **SecureString**. Use `scripts/setup_ssm_parameters.py` and `scripts/verify_ssm_parameters.py` — do not paste real values into docs or commits.
+
+| Parameter | Purpose |
+|-----------|---------|
+| `/dtl-global-platform/hubspot/token` | HubSpot Private App / static access token |
+| `/dtl-global-platform/stripe/secret` | Stripe secret — **`sk_test_...` until launch**; `sk_live_...` only when going live |
+| `/dtl-global-platform/stripe/connect_client_id` | Stripe Connect client ID (`ca_...`) |
+| `/dtl-global-platform/anthropic/api_key` | Anthropic API key (`sk-ant-...`) |
+| `/dtl-global-platform/github/codestar_connection_arn` | Existing AWS CodeStar Connections ARN for GitHub |
+
+Naming matches the repository name **dtl-global-platform** (`DTL_MASTER_PLAN.md` Appendix C).
+
+---
+
+## GitHub and CodeStar
+
+- **`gh` CLI:** `gh auth login` once; use `gh auth status` to confirm.
+- **CodeStar:** Create the GitHub connection in AWS (Developer Tools → **Connections**), then store the connection **ARN** in `/dtl-global-platform/github/codestar_connection_arn` for CodePipeline.
 
 ---
 
 ## Quick checklist
 
-- [ ] HubSpot: token in `.env`; CLI installed; `hs auth`; `hs mcp enable`; Cursor restarted
-- [ ] Stripe: `sk_test_` in `.env`; Stripe MCP in Cursor with test key
-- [ ] Anthropic: API key from console
-- [ ] SSM: all five parameters set (use setup script) before production Lambdas rely on them
-- [ ] GitHub: `gh` authenticated; CodeStar ARN in SSM when using CodePipeline
+- [ ] HubSpot: token in `.env`; `hs auth`; `hs mcp enable`; Cursor restarted
+- [ ] Stripe: `sk_test_` only for scripts; Stripe MCP in Cursor uses test key
+- [ ] Anthropic: key in `.env` for local dev
+- [ ] SSM: all five `/dtl-global-platform/...` parameters created (setup script) before production Lambdas
+- [ ] GitHub: `gh` authenticated; CodeStar ARN in SSM when using pipelines
