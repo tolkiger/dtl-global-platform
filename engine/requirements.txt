@@ -1,0 +1,8 @@
+# DTL-Global Platform Lambda Layer Dependencies
+# Per DTL_MASTER_PLAN.md Appendix B: Python Dependencies for Lambda functions
+
+hubspot-api-client>=9.0.0  # HubSpot CRM API client for onboarding workflows
+stripe>=8.0.0  # Stripe payments and Connect API for billing setup
+anthropic>=0.40.0  # Claude Haiku 4.5 direct API for AI features
+requests>=2.31.0  # HTTP client for external API calls
+boto3>=1.34.0  # AWS SDK for DynamoDB, S3, SES, SSM operations

@@ -1,0 +1,15 @@
+# CodeBuild buildspec for CDK deploy (Phase 1 pipeline). AWS CodeBuild reads this from the repo root.
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+      nodejs: 20
+    commands:
+      - npm install -g aws-cdk@2
+      - python3 -m pip install --upgrade pip
+      - python3 -m pip install -r requirements.txt
+      - python3 -m pip install -r cdk/requirements.txt
+  build:
+    commands:
+      - cd cdk && cdk deploy --all --require-approval never
