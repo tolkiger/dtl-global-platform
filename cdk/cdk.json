@@ -8,7 +8,6 @@
     "@aws-cdk/core:newStyleStackSynthesis": true,
     "githubOwner": "tolkiger",
     "githubRepo": "dtl-global-platform",
-    "domainName": "dtl-global.org",
-    "connectionArn": "REPLACE_WITH_YOUR_CODESTAR_CONNECTION_ARN"
+    "domainName": "dtl-global.org"
   }
 }
