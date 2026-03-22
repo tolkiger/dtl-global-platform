@@ -12,11 +12,11 @@ from botocore.exceptions import ClientError  # AWS API error responses
 
 # Expected parameters: name only (values must never be printed)
 _EXPECTED_PARAMETERS: list[str] = [
-    "/dtl/hubspot/token",  # HubSpot CRM token
-    "/dtl/stripe/secret",  # Stripe secret key
-    "/dtl/stripe/connect_client_id",  # Stripe Connect client id
-    "/dtl/anthropic/api_key",  # Anthropic API key
-    "/dtl/github/codestar_connection_arn",  # CodeStar Connections ARN for GitHub
+    "/dtl-global-platform/hubspot/token",  # HubSpot CRM token
+    "/dtl-global-platform/stripe/secret",  # Stripe secret key
+    "/dtl-global-platform/stripe/connect_client_id",  # Stripe Connect client id
+    "/dtl-global-platform/anthropic/api_key",  # Anthropic API key
+    "/dtl-global-platform/github/codestar_connection_arn",  # CodeStar Connections ARN for GitHub
 ]
 
 
