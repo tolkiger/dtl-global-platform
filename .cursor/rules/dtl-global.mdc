@@ -51,7 +51,7 @@ Before creating any new file or service:
 
 ### Rule 007: Phase Gate Enforcement
 Do NOT start a new phase until the current phase gate checklist
-(DTL_MASTER_PLAN.md Section 19) is fully satisfied.
+(DTL_MASTER_PLAN.md Section 21) is fully satisfied.
 
 ### Rule 008: File Naming Conventions
 - Python files: snake_case (e.g., hubspot_setup.py)
@@ -68,7 +68,7 @@ All API calls (HubSpot, Stripe, AWS, AI) MUST have:
 - Print statements for debugging (no logging frameworks)
 
 ### Rule 010: Secrets Management
-- All API keys/secrets in AWS SSM Parameter Store (SecureString)
+- All API keys/secrets in AWS SSM Parameter Store (SecureString) under `/dtl-global-platform/` paths (see DTL_MASTER_PLAN.md Appendix C)
 - NEVER hardcode secrets in source code
 - Lambda uses env vars that reference SSM parameters
 - .env files for LOCAL dev only, MUST be in .gitignore
@@ -79,16 +79,19 @@ Everything runs on Lambda, triggered by API Gateway or events.
 Data in DynamoDB and S3 only.
 
 ### Rule 012: GitFlow (MANDATORY for every phase)
-Before starting ANY phase (Phase 1 onward):
-1. Ensure a GitHub Project exists for dtl-global-platform (create once, reuse)
-2. Create a GitHub Issue describing the phase work
-3. Create a feature branch from main: feature/{issue-number}-phase-{N}-{short-description}
-4. Make granular commits for each task within the phase
-5. When phase is complete and all tests pass, push the feature branch
-6. Create a Pull Request with phase summary (use --body flag, NOT interactive editor)
-7. Merge the PR to main (use gh pr merge --squash --delete-branch --yes)
-8. NEVER use CLI commands that wait for user input (no interactive editors, no prompts)
-9. All git/gh commands must be non-interactive (use flags: --yes, --body, -m, etc.)
+Enforces feature branches, GitHub Issues, PRs, and non-interactive CLI only (see DTL_MASTER_PLAN.md Section 20).
+
+**One-time setup:** ensure a GitHub Project exists, e.g. `gh project create --title "DTL-Global Platform" --owner @me` (create once, reuse).
+
+**Before each phase (Phase 1 onward):** create a GitHub Issue describing the work; create a feature branch from `main` named `feature/{issue-number}-phase-{N}-{short-description}`.
+
+**During the phase:** make granular commits; use message format `feat(phase-{N}): {description} #{issue-number}`; reference the issue in every commit.
+
+**After the phase:** push the feature branch; open a PR with a written summary using `gh pr create ... --body "..."` (never `--editor`); merge with `gh pr merge --squash --delete-branch --yes`.
+
+**Never:** commit directly to `main`; use interactive git/gh editors or prompts; omit `--body`, `--yes`, or `-m` where a non-interactive flow requires them.
+
+**Always:** one feature branch and one PR per phase; squash-merge to keep `main` linear.
 
 ## Approved AWS Services (ONLY THESE)
 Lambda, API Gateway (REST), DynamoDB, S3, CloudFront, Route 53, ACM, SES,
