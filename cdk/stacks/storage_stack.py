@@ -68,6 +68,23 @@ class StorageStack(Stack):
             enforce_ssl=True,  # Deny plain HTTP requests
             versioned=False,  # Keep Phase 1 simple
             removal_policy=RemovalPolicy.RETAIN,  # Avoid accidental deletes
+            lifecycle_rules=[  # Cost optimization lifecycle rules
+                s3.LifecycleRule(  # Transition old assets to cheaper storage
+                    id="OptimizeAssetStorage",  # Human-readable rule name
+                    enabled=True,  # Rule is active
+                    transitions=[  # Storage class transitions for cost savings
+                        s3.Transition(  # Move to Infrequent Access after 30 days
+                            storage_class=s3.StorageClass.INFREQUENT_ACCESS,  # IA storage class
+                            transition_after=Duration.days(30),  # After 30 days of creation
+                        ),  # End IA transition
+                        s3.Transition(  # Move to Glacier Flexible Retrieval after 90 days
+                            storage_class=s3.StorageClass.GLACIER,  # Glacier storage class
+                            transition_after=Duration.days(90),  # After 90 days of creation
+                        ),  # End Glacier transition
+                    ],  # End transitions list
+                    expiration=Duration.days(2555),  # Delete after 7 years (2555 days) for compliance
+                ),  # End lifecycle rule
+            ],  # End lifecycle rules list
         )  # End assets bucket definition
         self.csv_import_bucket = s3.Bucket(  # CRM CSV uploads for import workflow
             self,  # Parent construct is this stack

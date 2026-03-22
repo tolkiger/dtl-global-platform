@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from aws_cdk import Stack, Tags  # CDK core helpers
+from aws_cdk import RemovalPolicy, Stack, Tags  # CDK core helpers
 from aws_cdk import aws_codebuild as codebuild  # CodeBuild project for CDK deploy
 from aws_cdk import aws_codepipeline as codepipeline  # CodePipeline service
 from aws_cdk import aws_codepipeline_actions as codepipeline_actions  # Pipeline action helpers
 from aws_cdk import aws_iam as iam  # IAM roles for CodeBuild
+from aws_cdk import aws_s3 as s3  # S3 bucket for pipeline artifacts
 from constructs import Construct  # Base construct class
 
 
@@ -68,11 +69,20 @@ class PipelineStack(Stack):
             project=build_project,  # CodeBuild project to execute
             input=source_artifact,  # Use the GitHub checkout as input
         )  # End build action
+        artifacts_bucket = s3.Bucket(  # S3 bucket for pipeline artifacts with cost-optimized encryption
+            self,  # Parent construct is this stack
+            "PipelineArtifactsBucket",  # Logical id inside the template
+            encryption=s3.BucketEncryption.S3_MANAGED,  # Use S3-managed encryption (free) instead of KMS
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,  # Block all public access for security
+            enforce_ssl=True,  # Require HTTPS for all requests
+            removal_policy=RemovalPolicy.DESTROY,  # Allow cleanup when stack is deleted (artifacts are ephemeral)
+        )  # End artifacts bucket definition
         codepipeline.Pipeline(  # Top-level pipeline with two stages (V2: recommended execution model)
             self,  # Parent construct is this stack
             "DtlDeploymentPipeline",  # Logical id inside the template
             pipeline_name="dtl-global-platform-deploy",  # Console-visible pipeline name
             pipeline_type=codepipeline.PipelineType.V2,  # Explicit V2 to avoid implicit V1 and match current defaults
+            artifact_bucket=artifacts_bucket,  # Use cost-optimized S3-managed encryption bucket
             stages=[  # Ordered pipeline stages
                 codepipeline.StageProps(  # Source stage
                     stage_name="Source",  # Human-readable stage name

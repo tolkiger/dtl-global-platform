@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.5.1
+# DTL-Global Platform — Master Build Plan v2.5.2
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.5.1 — CDN stack clarified: serves CLIENT websites only, not DTL-Global corporate site)
+> **Updated:** 2026-03-22 (v2.5.2 — Cost optimization: S3-managed encryption, CloudWatch log retention, S3 lifecycle rules)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
 | v2.5.1 | **CDN stack correction**: CloudFront distribution serves **CLIENT websites** (e.g., `clientname.com`) added programmatically during onboarding — **NOT** DTL-Global's corporate site. No `dtl-global.org` domains in CDN stack. Corporate site stays on existing deployment. |
 | v2.5.0 | Phase 1 CDK: website S3 bucket in CDN stack with CloudFront **Origin Access Control (OAC)** (not legacy OAI + deprecated `S3Origin`); Storage stack holds 2 S3 buckets + 3 DynamoDB tables; **CodePipeline V2**; `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` on all stacks; `aws-cdk-lib>=2.180`, `constructs>=10.4`; **dtl-global.org**: corporate site may stay on a separate CDK app — registrar/NS changes only if you delegate DNS to this account |
 | v2.4.1 | SSM parameter paths changed from /dtl/{param} to /dtl-global-platform/{param} to match repo naming convention |
@@ -179,6 +180,22 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 | CloudWatch Logs | Lambda logs (auto) | 5GB free |
 
 NOT ALLOWED: EC2, ECS, EKS, Fargate, Amplify, AppSync, Cognito, Step Functions, EventBridge, SQS, SNS, RDS, Aurora, ElastiCache, any monitoring tools.
+
+### 3.1 Cost Optimization Principles
+
+The platform is designed for maximum cost efficiency while maintaining functionality:
+
+| Optimization | Implementation | Monthly Savings |
+|-------------|----------------|-----------------|
+| **S3-Managed Encryption** | Pipeline artifacts use SSE-S3 instead of KMS | ~$1.00 (KMS key) + $0.10-0.50 (API calls) |
+| **CloudWatch Log Retention** | All Lambda functions: 30-day retention | Variable ($0-10+ depending on log volume) |
+| **S3 Lifecycle Rules** | Assets bucket: IA after 30 days, Glacier after 90 days | Variable (depends on asset accumulation) |
+| **CloudFront Price Class** | Price Class 100 (US/Canada/Europe) vs Global | 20-40% savings on CloudFront costs |
+| **DynamoDB On-Demand** | Pay-per-request vs provisioned capacity | Optimal for variable/low traffic |
+
+**Total Estimated Savings**: $1.60-11.50/month from optimizations
+
+**Cost Monitoring**: All stacks tagged with `Project=dtl-global-platform` for AWS Cost Explorer tracking.
 
 ---
 

@@ -9,6 +9,7 @@ from aws_cdk import aws_apigateway as apigateway  # REST API constructs
 from aws_cdk import aws_dynamodb as dynamodb  # DynamoDB table references
 from aws_cdk import aws_iam as iam  # IAM policies for Lambda roles
 from aws_cdk import aws_lambda as lambda_  # Lambda function constructs
+from aws_cdk import aws_logs as logs  # CloudWatch Logs for retention policies
 from aws_cdk import aws_s3 as s3  # S3 bucket references
 from constructs import Construct  # Base construct class
 
@@ -104,6 +105,7 @@ class ApiStack(Stack):
                 memory_size=256,  # Memory size per master plan baseline
                 environment=common_environment,  # Inject shared configuration
                 function_name=function_name,  # Predictable name in the Lambda console
+                log_retention=logs.RetentionDays.ONE_MONTH,  # 30-day log retention for cost optimization
             )  # End Lambda function definition
             templates_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for templates
             clients_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for clients
