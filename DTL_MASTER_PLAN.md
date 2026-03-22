@@ -1,0 +1,689 @@
+# DTL-Global Platform — Master Build Plan v2.4.1
+
+> **Owner:** Gerardo Castaneda — DTL-Global
+> **Created:** 2026-03-21
+> **Updated:** 2026-03-22 (v2.4.1 — SSM paths: /dtl-global-platform/{param})
+> **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
+
+---
+
+## Changelog
+
+| Version | Changes |
+|---------|---------|
+| v2.4.1 | SSM parameter paths changed from /dtl/{param} to /dtl-global-platform/{param} to match repo naming convention |
+| v2.4 | Removed MCP json from bootstrap; added docs/AUTHENTICATION.md; Stripe sandbox-first; SSM setup script; GitFlow Rule 012 + skill; GitHub Project + Issues per phase; Friends and Family pricing; updated progress |
+| v2.3 | HubSpot developer platform 2025.2 project + static auth |
+| v2.2 | Phase 0 HubSpot prereq: document Development Legacy apps |
+| v2.1 | Added Section 0: Project Bootstrap |
+| v2.0 | Repo rename, 100% serverless, MCP strategy, client types, CodeStar, CRM import |
+| v1.0 | Initial plan |
+
+---
+
+## Current Progress
+
+| Area | Status |
+|------|--------|
+| Bootstrap (Section 0) | Done |
+| HubSpot Phase 0 | Done — verify ALL CHECKS PASSED |
+| Stripe Phase 0 | Confirm — run phase0_stripe_setup / verify (SANDBOX mode) |
+| AWS SSM (Phase 0.5) | Not done — run scripts/setup_ssm_parameters.py |
+| Phase 1 (CDK) | Not started |
+| Phases 2-6 | Not started |
+
+---
+
+## Table of Contents
+
+0. [Project Bootstrap](#0-project-bootstrap-cursor-creates-everything)
+1. [Cursor Rules and Coding Standards](#1-cursor-rules--coding-standards)
+2. [Project Structure](#2-project-structure)
+3. [Approved AWS Services](#3-approved-aws-services)
+4. [Approved External APIs](#4-approved-external-apis)
+5. [MCP vs Python SDK Decision](#5-mcp-vs-python-sdk-decision)
+6. [Client Types and Service Packages](#6-client-types--service-packages)
+7. [Phase 0: Setup HubSpot and Stripe](#7-phase-0-setup-hubspot--stripe-for-dtl-global)
+8. [Phase 0.5: SSM Parameters and GitFlow Setup](#8-phase-05-ssm-parameters--gitflow-setup)
+9. [Phase 1: Foundation CDK Infrastructure](#9-phase-1-foundation--cdk-infrastructure)
+10. [Phase 2: Onboarding Engine Lambda Functions](#10-phase-2-onboarding-engine--lambda-functions)
+11. [Phase 3: AI Layer](#11-phase-3-ai-layer)
+12. [Phase 4: Client Website Deployment](#12-phase-4-client-website-deployment-automation)
+13. [Phase 5: Add-On Modules](#13-phase-5-add-on-modules)
+14. [Phase 6: End-to-End Testing](#14-phase-6-end-to-end-testing--first-client)
+15. [Industry Templates Schema](#15-industry-templates-schema)
+16. [DTL-Global HubSpot Pipeline Definition](#16-dtl-global-hubspot-pipeline-definition)
+17. [SEO Prompt Template](#17-seo-prompt-template)
+18. [Pricing Formula](#18-pricing-formula)
+19. [CRM Data Import Specification](#19-crm-data-import-specification)
+20. [GitFlow Workflow](#20-gitflow-workflow)
+21. [Phase Gate Checklist](#21-phase-gate-checklist)
+
+---
+
+## 0. Project Bootstrap (Cursor Creates Everything)
+
+### 0.0 Purpose
+
+This section tells Cursor to set up the entire project structure, rules, skills, and configuration files BEFORE any development begins.
+
+### 0.1 Instructions for Cursor
+
+WHEN GERARDO SAYS: "Bootstrap the project" or "Run Section 0"
+
+DO THE FOLLOWING IN THIS EXACT ORDER:
+1. Create the directory structure (Section 0.2)
+2. Create the Cursor rules file (Section 0.3)
+3. Create the Cursor skills files (Section 0.4)
+4. Create the docs/AUTHENTICATION.md file (Section 0.5)
+5. Create the .gitignore (Section 0.6)
+6. Create the .env.example (Section 0.7)
+7. Create the README.md (Section 0.8)
+8. Create empty __init__.py files (Section 0.9)
+9. Print confirmation checklist (Section 0.10)
+
+NOTE: MCP servers are NOT configured via .cursor/mcp.json in this project.
+  - Stripe MCP: installed via Cursor native MCP integration (Settings > MCP)
+  - HubSpot MCP: installed via hubspotcli (hs mcp enable)
+  See docs/AUTHENTICATION.md for setup instructions.
+
+### 0.2 Directory Structure
+
+    dtl-global-platform/
+    +-- .cursor/rules/ and skills/
+    +-- docs/
+    +-- scripts/
+    +-- cdk/stacks/
+    +-- engine/shared/, handlers/, templates/
+    +-- tests/
+    +-- client-sites/
+
+### 0.3 - 0.10
+
+See Section 1 for rules, Section 0.4 for skills (phase-management, code-generation, dtl-workflow, gitflow), Section 0.5 for docs/AUTHENTICATION.md.
+
+---
+
+## 1. Cursor Rules and Coding Standards
+
+### 1.1 Summary of 12 Rules
+
+| Rule | Name | What It Enforces |
+|------|------|-----------------|
+| 001 | Google Docstring Format | All functions/classes use Google-style docstrings |
+| 002 | Comment Every Line | Inline comments on every meaningful line |
+| 003 | No Over-Engineering | Only approved AWS services, no extras |
+| 004 | Clean Up Obsolete Files | Delete temp/scratch files after each phase |
+| 005 | Python Only | Python 3.12+ for everything |
+| 006 | Do Not Deviate | Check plan before creating anything new |
+| 007 | Phase Gate Enforcement | Complete current phase before starting next |
+| 008 | File Naming | snake_case, handler_ prefix, _stack suffix |
+| 009 | Error Handling | try/except on all API calls |
+| 010 | Secrets Management | SSM Parameter Store (/dtl-global-platform/), never hardcode |
+| 011 | 100% Serverless | No EC2, no containers, no always-on compute |
+| 012 | GitFlow | Feature branches, issues, PRs, non-interactive CLI |
+
+### 1.2 Cursor Skills
+
+| Skill File | Purpose |
+|-----------|---------|
+| phase-management.md | Tracks phases, enforces gates, reports status |
+| code-generation.md | Code structure template, docstring examples, checklist |
+| dtl-workflow.md | The 8-stage pipeline, client types, integration points |
+| gitflow.md | GitFlow commands, branch naming, PR creation |
+
+---
+
+## 2. Project Structure
+
+    dtl-global-platform/
+    +-- DTL_MASTER_PLAN.md
+    +-- README.md
+    +-- .gitignore
+    +-- .env.example
+    +-- .cursor/rules/dtl-global.mdc and skills/ (4 files)
+    +-- docs/AUTHENTICATION.md
+    +-- scripts/
+    |   +-- phase0_hubspot_setup.py
+    |   +-- phase0_hubspot_verify.py
+    |   +-- phase0_stripe_setup.py        (SANDBOX mode)
+    |   +-- phase0_stripe_verify.py
+    |   +-- setup_ssm_parameters.py       (Phase 0.5)
+    |   +-- verify_ssm_parameters.py
+    |   +-- seed_templates.py
+    +-- cdk/app.py, cdk.json, requirements.txt, stacks/ (7 stacks)
+    +-- engine/shared/ (7 modules), handlers/ (12 handlers), templates/
+    +-- tests/
+
+---
+
+## 3. Approved AWS Services
+
+100% SERVERLESS. ONLY these services.
+
+| Service | Purpose | Free Tier |
+|---------|---------|-----------|
+| Lambda | All compute (Python 3.12) | 1M req/month |
+| API Gateway (REST) | HTTP endpoints | 1M calls/month (12 mo) |
+| DynamoDB | Data storage | 25GB |
+| S3 | Websites, assets, CSV imports | 5GB (12 mo) |
+| CloudFront | CDN | 1TB/month (12 mo) |
+| Route 53 | DNS | $0.50/zone + $14/domain |
+| ACM | SSL certificates | Free |
+| SES | Emails | Free from Lambda |
+| SSM Parameter Store | Secrets | Free (standard) |
+| CodePipeline | CI/CD | $1/pipeline/month |
+| CodeBuild | Build step | 100 min/month free |
+| CloudWatch Logs | Lambda logs (auto) | 5GB free |
+
+NOT ALLOWED: EC2, ECS, EKS, Fargate, Amplify, AppSync, Cognito, Step Functions, EventBridge, SQS, SNS, RDS, Aurora, ElastiCache, any monitoring tools.
+
+---
+
+## 4. Approved External APIs
+
+| API | Purpose | Auth | Mode |
+|-----|---------|------|------|
+| HubSpot CRM API | CRM management | Private App Token | Production |
+| Stripe API | Payments, invoicing | Secret Key | SANDBOX until launch |
+| Stripe Connect | Client payment accounts | OAuth + Platform | SANDBOX until launch |
+| Anthropic Claude (Direct) | AI features | API Key | Production |
+| Google Workspace Admin | Email (future) | OAuth 2.0 | Future |
+| GitHub API | CI/CD triggers | Existing CodeStar | Production |
+
+Stripe Sandbox Strategy:
+- ALL development and testing uses sk_test_ keys
+- Switch to sk_live_ keys ONLY when first real client is ready to pay
+- See docs/AUTHENTICATION.md for switching procedure
+
+---
+
+## 5. MCP vs Python SDK Decision
+
+MCP Servers (Cursor IDE only):
+- Stripe: Cursor native integration (Settings > MCP)
+- HubSpot: hubspotcli (hs mcp enable)
+- Use for: exploring APIs, verifying data, quick queries
+
+Python SDKs (Production):
+- stripe and hubspot-api-client Python packages
+- Use for: all code, scripts, Lambda functions
+
+---
+
+## 6. Client Types and Service Packages
+
+### 6.1 Client Types
+
+TYPE A: FULL PACKAGE — DNS, Website, CRM, Stripe, Email, Notify
+TYPE B: WEBSITE + EMAIL ONLY — DNS, Website, Email(if requested), Notify
+TYPE C: WEBSITE + CRM — DNS, Website, CRM, Notify
+TYPE D: CRM + PAYMENTS ONLY — CRM, Stripe, Notify
+
+### 6.2 Service Packages
+
+FRIENDS AND FAMILY: $0 setup / $20 monthly
+  Website hosting and basic maintenance only. For family/friends.
+
+STARTER: $500 setup / $49 monthly
+  Website + hosting + SEO. Optional custom email (+$100 setup).
+
+GROWTH: $1,250 setup / $149 monthly
+  Everything in Starter + HubSpot CRM + Stripe + custom email.
+
+PROFESSIONAL: $2,500 setup / $249 monthly
+  Everything in Growth + AI chatbot + CRM import + priority support.
+
+PREMIUM: $4,000+ setup / $399+ monthly
+  Everything in Professional + bots + custom automations.
+
+### 6.3 Website-Only Maintenance Tiers
+
+FRIENDS AND FAMILY: $20/month
+BASIC HOSTING: $49/month
+MANAGED HOSTING: $99/month
+
+### 6.4 Stripe Products (9 total, SANDBOX mode)
+
+One-Time Setup:
+  DTL Starter Setup: $500
+  DTL Growth Setup: $1,250
+  DTL Professional Setup: $2,500
+  DTL Premium Setup: $4,000
+
+Monthly Subscriptions:
+  DTL Friends and Family Hosting: $20/month
+  DTL Starter Monthly: $49/month
+  DTL Growth Monthly: $149/month
+  DTL Professional Monthly: $249/month
+  DTL Premium Monthly: $399/month
+
+---
+
+## 7. Phase 0: Setup HubSpot and Stripe for DTL-Global
+
+### 7.1 HubSpot Setup — Status: DONE
+
+### 7.2 Stripe Setup — Status: CONFIRM (SANDBOX mode)
+
+Creates 9 products. Scripts MUST refuse live keys (sk_live_).
+
+### 7.3 Phase 0 Gate
+
+HubSpot:
+[x] phase0_hubspot_setup.py runs without errors
+[x] phase0_hubspot_verify.py ALL checks passed
+[x] Pipeline visible in HubSpot UI with 10 stages
+[x] All custom properties visible
+
+Stripe:
+[ ] phase0_stripe_setup.py runs (SANDBOX)
+[ ] phase0_stripe_verify.py ALL checks passed
+[ ] All 9 products visible in Stripe Dashboard (test mode)
+[ ] Script refuses live keys
+
+---
+
+## 8. Phase 0.5: SSM Parameters and GitFlow Setup
+
+### 8.1 Purpose
+
+Before Phase 1 (CDK), create all secrets in SSM and set up GitFlow.
+
+### 8.2 SSM Parameters Script
+
+Create: scripts/setup_ssm_parameters.py
+
+Why a script and NOT CDK:
+- CDK would require passing secrets during deploy (insecure)
+- CDK stores secrets in CloudFormation state (insecure)
+- Script prompts interactively, creates SecureString params
+- Run once from workstation
+
+Parameters to create (NOTE: /dtl-global-platform/ prefix):
+
+    /dtl-global-platform/hubspot/token                  — HubSpot Private App token
+    /dtl-global-platform/stripe/secret                  — Stripe Secret Key (sk_test_...)
+    /dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID (ca_...)
+    /dtl-global-platform/anthropic/api_key              — Anthropic Claude API key
+    /dtl-global-platform/github/codestar_connection_arn — Existing CodeStar connection ARN
+
+Safety checks:
+- Stripe key must start with "sk_test_" (refuses live keys)
+- All values stored as SecureString (encrypted)
+- No values printed after storage
+- Idempotent: skips existing params unless --overwrite flag
+
+Create: scripts/verify_ssm_parameters.py
+- Checks all 5 params exist as SecureString
+- Does NOT print values
+- Reports pass/fail for each
+
+### 8.3 GitHub Project Setup
+
+    gh project create --title "DTL-Global Platform" --owner @me
+
+### 8.4 Phase 0.5 Gate
+
+SSM:
+[ ] setup_ssm_parameters.py runs without errors
+[ ] verify_ssm_parameters.py reports all 5 parameters exist
+[ ] Stripe SSM parameter uses test key (sk_test_)
+
+GitFlow:
+[ ] GitHub Project "DTL-Global Platform" exists
+[ ] gh auth status shows authenticated
+[ ] git remote shows dtl-global-platform repo
+
+---
+
+## 9. Phase 1: Foundation CDK Infrastructure
+
+### 9.1 GitFlow: Before Starting
+
+Create GitHub Issue, then feature branch from main.
+
+### 9.2 CodeStar Connection
+
+Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
+
+### 9.3 What Gets Created
+
+Storage Stack: 3 DynamoDB tables + 3 S3 buckets
+API Stack: API Gateway (12 endpoints) + 12 Lambda functions (Python 3.12, 256MB, 5min)
+CDN Stack: CloudFront OAI
+DNS Stack: DTL-Global hosted zone only
+Email Stack: SES sender verification
+SSL Stack: ACM base config
+Pipeline Stack: CodePipeline using EXISTING CodeStar connection
+
+### 9.4 Lambda Environment Variables (referencing SSM)
+
+    HUBSPOT_TOKEN_PARAM=/dtl-global-platform/hubspot/token
+    STRIPE_SECRET_PARAM=/dtl-global-platform/stripe/secret
+    STRIPE_CONNECT_CLIENT_ID_PARAM=/dtl-global-platform/stripe/connect_client_id
+    ANTHROPIC_API_KEY_PARAM=/dtl-global-platform/anthropic/api_key
+
+### 9.5 Phase 1 Gate
+
+[ ] GitHub Issue created
+[ ] Feature branch created from main
+[ ] cdk deploy --all succeeds
+[ ] All DynamoDB tables exist
+[ ] All S3 buckets exist (including csv-imports)
+[ ] API Gateway exists with 12 endpoints
+[ ] CodePipeline uses EXISTING CodeStar
+[ ] SES sender verified
+[ ] NO non-serverless resources
+[ ] All commits reference issue number
+[ ] PR merged to main
+
+---
+
+## 10. Phase 2: Onboarding Engine Lambda Functions
+
+### 10.1 Build Order (19 steps)
+
+Step 1:  shared/config.py
+Step 2:  shared/hubspot_client.py
+Step 3:  shared/stripe_client.py       (SANDBOX keys)
+Step 4:  shared/ai_client.py           (Claude Haiku 4.5)
+Step 5:  shared/ses_client.py
+Step 6:  shared/route53_client.py
+Step 7:  shared/s3_client.py
+Step 8:  handler_bid.py
+Step 9:  handler_prompt.py             (SEO-optimized)
+Step 10: handler_invoice.py            (Stripe SANDBOX)
+Step 11: handler_crm_setup.py
+Step 12: handler_stripe_setup.py       (Stripe Connect SANDBOX)
+Step 13: handler_dns.py
+Step 14: handler_deploy.py
+Step 15: handler_email_setup.py
+Step 16: handler_subscribe.py          (Stripe SANDBOX)
+Step 17: handler_notify.py
+Step 18: handler_crm_import.py         (CSV import)
+Step 19: handler_onboard.py            (Orchestrator, client_type aware)
+
+### 10.2 shared/config.py SSM References
+
+    SSM_PARAMS = {
+        "hubspot_token": "/dtl-global-platform/hubspot/token",
+        "stripe_secret": "/dtl-global-platform/stripe/secret",
+        "stripe_connect_client_id": "/dtl-global-platform/stripe/connect_client_id",
+        "anthropic_api_key": "/dtl-global-platform/anthropic/api_key",
+    }
+
+    CLIENT_TYPES = {
+        "full_package": ["dns", "website", "crm", "stripe", "email", "notify"],
+        "website_only": ["dns", "website", "email_optional", "notify"],
+        "website_crm": ["dns", "website", "crm", "notify"],
+        "crm_payments": ["crm", "stripe", "notify"]
+    }
+
+### 10.3 Phase 2 Gate
+
+[ ] GitHub Issue + feature branch
+[ ] All shared modules + handlers working
+[ ] All 4 client types handled
+[ ] CRM import handler works
+[ ] All Stripe calls use SANDBOX
+[ ] Tests pass, code documented
+[ ] PR merged to main
+
+---
+
+## 11. Phase 3: AI Layer
+
+Model: Claude Haiku 4.5 (direct Anthropic API, key from /dtl-global-platform/anthropic/api_key)
+
+Features: bid generation, SEO website prompts, custom request estimation, template customization, CRM column mapping.
+
+### Phase 3 Gate
+
+[ ] GitHub Issue + feature branch
+[ ] Bid generation works for 3+ industries
+[ ] Website prompt includes all SEO elements
+[ ] AI costs under $0.05 for 10 test calls
+[ ] PR merged to main
+
+---
+
+## 12. Phase 4: Client Website Deployment Automation
+
+Flow: GitHub repo to S3 to CloudFront to ACM cert to Route 53 to HTTPS live
+
+Three domain scenarios:
+A: New domain (Route 53 register $14)
+B: Existing domain elsewhere (point NS to Route 53)
+C: Already on Route 53 (use existing zone)
+
+### Phase 4 Gate
+
+[ ] GitHub Issue + feature branch
+[ ] Test site deploys GitHub to S3
+[ ] CloudFront serves site, SSL attached
+[ ] HTTPS works on custom domain
+[ ] All 3 domain scenarios handled
+[ ] PR merged to main
+
+---
+
+## 13. Phase 5: Add-On Modules
+
+Priority: AI chatbot, Google Workspace email, WhatsApp, Slack/Teams
+
+### Phase 5 Gate
+
+[ ] GitHub Issue + feature branch
+[ ] AI chatbot works, captures leads to HubSpot
+[ ] Google Workspace DNS records correct
+[ ] PR merged to main
+
+---
+
+## 14. Phase 6: End-to-End Testing and First Client
+
+Test ALL 4 client types + CRM import. ALL Stripe in SANDBOX.
+
+### Phase 6 Gate
+
+[ ] GitHub Issue + feature branch
+[ ] All 4 client type tests pass
+[ ] CRM import test (50-row CSV)
+[ ] All emails received correctly
+[ ] Website loads with SSL
+[ ] HubSpot CRM configured correctly
+[ ] Stripe accepts test payment (SANDBOX)
+[ ] Demo under 10 minutes
+[ ] AWS bill under $20
+[ ] 100% serverless verified
+[ ] All PRs merged to main
+[ ] Ready to switch Stripe to PRODUCTION
+
+---
+
+## 15. Industry Templates Schema
+
+Roofing template with HubSpot pipelines, custom properties, Stripe products, SEO keywords, chatbot system prompt.
+
+---
+
+## 16. DTL-Global HubSpot Pipeline Definition
+
+Status: DONE. 10 stages: New Lead, Discovery, Proposal and Bid, Contract and Deposit, Build Website, Deploy and Connect, Final Payment, Live and Monthly, Nurture, Lost.
+
+---
+
+## 17. SEO Prompt Template
+
+Every AI-generated website prompt includes:
+1. Semantic HTML5
+2. Meta title/description with keywords
+3. H1/H2/H3 hierarchy
+4. Schema.org (LocalBusiness + industry)
+5. Open Graph tags
+6. Mobile-first responsive
+7. robots.txt + sitemap.xml
+8. NAP consistency
+9. Internal linking
+10. CTA above fold
+11. Contact form with honeypot
+12. Google Maps embed
+13. Accessibility (ARIA, contrast, keyboard)
+
+---
+
+## 18. Pricing Formula
+
+### Custom Request Formula
+
+Custom Price = (Estimated Hours x $75) + Tool Costs + Monthly Maintenance
+Monthly Maintenance = max(20% of setup cost, $49)
+
+### AI Bid Guardrails
+
+Min setup: $300 | Max setup: $10,000
+Min monthly: $20 (F&F) | Regular min: $49 | Max: $999
+Hourly rate: $75 (fixed)
+Deposit: 50% of setup (not applicable for F&F)
+
+---
+
+## 19. CRM Data Import Specification
+
+Process: Export CSV from client CRM, upload to S3, AI suggests column mapping, confirm, batch import to HubSpot.
+Limits: 10MB max, 10,000 rows, 100 per batch.
+
+---
+
+## 20. GitFlow Workflow
+
+### 20.1 One-Time Setup
+
+    gh project create --title "DTL-Global Platform" --owner @me
+
+### 20.2 Per-Phase Workflow
+
+BEFORE: Create GitHub Issue, create feature branch from main
+DURING: Granular commits with format: feat(phase-{N}): {desc} #{issue}
+AFTER: Push, create PR (--body flag), merge (--squash --delete-branch --yes)
+
+### 20.3 Branch Naming
+
+    feature/{issue-number}-phase-{N}-{short-description}
+
+### 20.4 Critical Rules
+
+- NEVER commit directly to main
+- NEVER use interactive CLI commands
+- ALWAYS use --body, --yes, -m flags
+- ALWAYS reference issue number in commits
+- ONE feature branch per phase, ONE PR per phase
+- Squash merge to keep main clean
+
+---
+
+## 21. Phase Gate Checklist
+
+BOOTSTRAP — DONE
+[x] All directories, rules (12), skills (4), docs/AUTHENTICATION.md, .gitignore, .env.example, README, __init__.py files created
+[x] MCP servers set up (Cursor native for Stripe, hubspotcli for HubSpot)
+
+PHASE 0 — HubSpot and Stripe
+[x] HubSpot setup + verify pass
+[ ] Stripe setup + verify pass (SANDBOX, 9 products)
+PROCEED TO PHASE 0.5
+
+PHASE 0.5 — SSM Parameters and GitFlow
+[ ] setup_ssm_parameters.py runs (all 5 params under /dtl-global-platform/)
+[ ] verify_ssm_parameters.py all pass
+[ ] Stripe SSM uses sk_test_
+[ ] GitHub Project exists
+[ ] gh auth + git remote confirmed
+PROCEED TO PHASE 1
+
+PHASE 1 — CDK Infrastructure
+[ ] Issue + branch created
+[ ] cdk deploy --all succeeds
+[ ] All resources exist, CodePipeline uses CodeStar
+[ ] 100% serverless, PR merged
+PROCEED TO PHASE 2
+
+PHASE 2 — Lambda Functions
+[ ] Issue + branch, all handlers working, 4 client types, SANDBOX Stripe, PR merged
+PROCEED TO PHASE 3
+
+PHASE 3 — AI Layer
+[ ] Issue + branch, bid/prompt/estimation working, PR merged
+PROCEED TO PHASE 4
+
+PHASE 4 — Website Deployment
+[ ] Issue + branch, deploy pipeline working, 3 domain scenarios, PR merged
+PROCEED TO PHASE 5
+
+PHASE 5 — Add-Ons
+[ ] Issue + branch, chatbot + email working, PR merged
+PROCEED TO PHASE 6
+
+PHASE 6 — E2E Testing
+[ ] Issue + branch, all tests pass, demo under 10 min, PR merged
+READY TO ONBOARD — Switch Stripe to PRODUCTION
+
+---
+
+## Appendix A: Environment Variables (Lambda)
+
+    HUBSPOT_TOKEN_PARAM=/dtl-global-platform/hubspot/token
+    STRIPE_SECRET_PARAM=/dtl-global-platform/stripe/secret
+    STRIPE_CONNECT_CLIENT_ID_PARAM=/dtl-global-platform/stripe/connect_client_id
+    ANTHROPIC_API_KEY_PARAM=/dtl-global-platform/anthropic/api_key
+    TEMPLATES_TABLE=dtl-industry-templates
+    CLIENTS_TABLE=dtl-clients
+    STATE_TABLE=dtl-onboarding-state
+    WEBSITE_BUCKET=dtl-client-websites-{account_id}
+    ASSETS_BUCKET=dtl-assets-{account_id}
+    CSV_IMPORT_BUCKET=dtl-csv-imports-{account_id}
+    SES_FROM_EMAIL=onboarding@dtl-global.com
+
+## Appendix B: Python Dependencies
+
+CDK (cdk/requirements.txt):
+  aws-cdk-lib>=2.100.0
+  constructs>=10.0.0
+
+Lambda Layer (engine/requirements.txt):
+  hubspot-api-client>=9.0.0
+  stripe>=8.0.0
+  anthropic>=0.40.0
+  requests>=2.31.0
+  boto3>=1.34.0
+
+## Appendix C: SSM Parameter Paths (Complete Reference)
+
+    /dtl-global-platform/hubspot/token                  — HubSpot Private App access token
+    /dtl-global-platform/stripe/secret                  — Stripe Secret Key (sk_test_ until production)
+    /dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID (ca_...)
+    /dtl-global-platform/anthropic/api_key              — Anthropic Claude API key (sk-ant-...)
+    /dtl-global-platform/github/codestar_connection_arn — AWS CodeStar connection ARN
+
+All parameters are SecureString type. Created via scripts/setup_ssm_parameters.py.
+Naming convention matches the repository name: dtl-global-platform.
+
+## Appendix D: Cursor Quick Reference
+
+1. Open dtl-global-platform/ in Cursor
+2. Read DTL_MASTER_PLAN.md
+3. Check phase status (Section 21)
+4. BEFORE starting a phase: create GitHub Issue + feature branch (Rule 012)
+5. Build ONLY current phase
+6. Follow ALL 12 rules
+7. Make granular commits referencing the issue
+8. Run gate checklist before completing
+9. Push, create PR (--body), merge (--squash --yes)
+10. Clean up temp files
+11. Use Sonnet 4 (not Auto)
+12. Ask Gerardo if unsure
+
+---
+
+*End of DTL-Global Platform Master Build Plan v2.4.1*
