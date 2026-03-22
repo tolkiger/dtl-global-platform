@@ -14,32 +14,32 @@ from botocore.exceptions import ClientError  # AWS API error responses
 # Canonical parameter names and prompt labels for operator clarity
 _PARAMETER_CONFIG: list[dict[str, Any]] = [
     {
-        "name": "/dtl/hubspot/token",  # SSM path for HubSpot CRM token
-        "label": "HubSpot token (/dtl/hubspot/token)",  # Human label for prompts
+        "name": "/dtl-global-platform/hubspot/token",  # SSM path for HubSpot CRM token
+        "label": "HubSpot token (/dtl-global-platform/hubspot/token)",  # Human label for prompts
         "use_getpass": True,  # Mask input because it is a secret
         "require_sk_test_prefix": False,  # Not a Stripe key
     },
     {
-        "name": "/dtl/stripe/secret",  # SSM path for Stripe secret key
-        "label": "Stripe secret key (/dtl/stripe/secret) — must be sk_test_ until production",  # Guidance
+        "name": "/dtl-global-platform/stripe/secret",  # SSM path for Stripe secret key
+        "label": "Stripe secret key (/dtl-global-platform/stripe/secret) — must be sk_test_ until production",  # Guidance
         "use_getpass": True,  # Mask Stripe secret
         "require_sk_test_prefix": True,  # Enforce sandbox keys for local/bootstrap safety
     },
     {
-        "name": "/dtl/stripe/connect_client_id",  # SSM path for Connect client id
-        "label": "Stripe Connect client id (/dtl/stripe/connect_client_id)",  # Human label
+        "name": "/dtl-global-platform/stripe/connect_client_id",  # SSM path for Connect client id
+        "label": "Stripe Connect client id (/dtl-global-platform/stripe/connect_client_id)",  # Human label
         "use_getpass": True,  # Treat as sensitive; avoid terminal history echo
         "require_sk_test_prefix": False,  # Not a Stripe secret key string
     },
     {
-        "name": "/dtl/anthropic/api_key",  # SSM path for Anthropic API key
-        "label": "Anthropic API key (/dtl/anthropic/api_key)",  # Human label
+        "name": "/dtl-global-platform/anthropic/api_key",  # SSM path for Anthropic API key
+        "label": "Anthropic API key (/dtl-global-platform/anthropic/api_key)",  # Human label
         "use_getpass": True,  # Mask API key
         "require_sk_test_prefix": False,  # Not Stripe
     },
     {
-        "name": "/dtl/github/codestar_connection_arn",  # SSM path for CodeStar connection ARN
-        "label": "GitHub CodeStar connection ARN (/dtl/github/codestar_connection_arn)",  # Human label
+        "name": "/dtl-global-platform/github/codestar_connection_arn",  # SSM path for CodeStar connection ARN
+        "label": "GitHub CodeStar connection ARN (/dtl-global-platform/github/codestar_connection_arn)",  # Human label
         "use_getpass": False,  # ARN is not a short secret; show while typing for verification
         "require_sk_test_prefix": False,  # Not Stripe
     },
@@ -93,17 +93,20 @@ def _prompt_value(cfg: dict[str, Any]) -> str:
     return value  # Validated operator input
 
 
-def _validate_stripe_test_key(value: str) -> None:
-    """Ensure Stripe secret values start with sk_test_ for this bootstrap script.
+def _validate_stripe_ssm_secret(value: str) -> None:
+    """Refuse Stripe live keys and require sk_test_ for SSM bootstrap (DTL_MASTER_PLAN.md §8.2).
 
     Args:
-        value: Raw Stripe secret key string.
+        value: Raw Stripe secret key string for `/dtl-global-platform/stripe/secret`.
 
     Raises:
-        SystemExit: When the key does not start with sk_test_.
+        SystemExit: When the key is sk_live_ or not sk_test_.
     """
-    if not value.startswith("sk_test_"):  # Block live keys in setup helper
-        print(  # Match Stripe Phase 0 safety messaging
+    if value.startswith("sk_live_"):  # Never store production keys via this interactive script
+        print("ERROR: Refusing to store Stripe live keys (sk_live_) in SSM via this script. Use sk_test_ until go-live.")  # Plan §8.2
+        raise SystemExit(1)  # Stop before writing SSM
+    if not value.startswith("sk_test_"):  # Block non-test keys (restricted keys, typos, etc.)
+        print(  # Enforce sandbox-only bootstrap path
             "ERROR: Stripe key must start with sk_test_. Refusing to store non-test keys via this script."
         )  # End error line
         raise SystemExit(1)  # Stop before writing SSM
@@ -158,7 +161,7 @@ def main() -> None:
             continue  # Move to next parameter
         value = _prompt_value(cfg)  # Collect operator input with correct prompt style
         if cfg["require_sk_test_prefix"]:  # Stripe secret validation gate
-            _validate_stripe_test_key(value)  # Enforce sk_test_ prefix only
+            _validate_stripe_ssm_secret(value)  # Refuse sk_live_ and require sk_test_
         _put_secure_string(client, name, value, overwrite=exists)  # Create (exists=False) or replace (--overwrite path)
         created.append(name)  # Record successful write
         print(f"OK: Wrote {name} as SecureString.")  # Confirm without echoing value
