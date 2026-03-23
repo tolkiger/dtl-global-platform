@@ -34,10 +34,10 @@ if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
 # Import shared modules directly
-import config
-import s3_client
-import route53_client
-import ai_client
+from config import config
+from s3_client import s3_client
+from route53_client import route53_client
+from ai_client import ai_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
