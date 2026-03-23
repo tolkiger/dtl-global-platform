@@ -27,9 +27,9 @@ if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
 # Import shared modules directly
-import config
-import stripe_client
-import ses_client
+from config import config
+from stripe_client import stripe_client
+from ses_client import ses_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:

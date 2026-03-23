@@ -22,7 +22,7 @@
     "steps": {
       "hubspot": {
         "success": false,
-        "error": "HubSpot API failed: 500 - {\"error\": \"Internal server error: module 'hubspot_client' has no attribute 'get_contact_by_email'\", \"timestamp\": \"2026-03-23T07:08:15.262967\"}"
+        "error": "HubSpot API failed: 500 - {\"error\": \"Internal server error: No module named 'pkg_resources'\", \"timestamp\": \"2026-03-23T07:19:10.139813\"}"
       },
       "deployment": {
         "success": false,
@@ -30,7 +30,7 @@
       },
       "dns_ssl": {
         "success": false,
-        "error": "DNS API failed: 500 - {\"error\": \"module 'route53_client' has no attribute 'create_hosted_zone'\", \"timestamp\": \"2026-03-23T07:08:16.473172\"}"
+        "error": "DNS API failed: 500 - {\"error\": \"ClientError.__init__() missing 1 required positional argument: 'operation_name'\", \"timestamp\": \"2026-03-23T07:19:13.914743\"}"
       },
       "billing": {
         "success": false,
@@ -38,11 +38,11 @@
       },
       "notifications": {
         "success": false,
-        "error": "Notification API failed: 500 - {\"error\": \"module 'ses_client' has no attribute 'send_email'\", \"timestamp\": \"2026-03-23T07:08:18.556805\"}"
+        "error": "Notification API failed: 500 - {\"error\": \"ClientError.__init__() missing 1 required positional argument: 'operation_name'\", \"timestamp\": \"2026-03-23T07:19:20.425050\"}"
       }
     },
     "success": true,
     "errors": []
   },
-  "last_updated": "2026-03-23T02:08:18.566354"
+  "last_updated": "2026-03-23T02:19:20.495649"
 }
