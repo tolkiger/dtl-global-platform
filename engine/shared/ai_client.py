@@ -1051,6 +1051,109 @@ Focus on industry best practices and conversion optimization for {industry} busi
         }
         
         return merged_template
+    
+    def generate_chatbot_response(self, user_message: str, system_prompt: str, 
+                                conversation_context: Optional[str] = None) -> str:
+        """Generate AI chatbot response for customer interactions.
+        
+        Args:
+            user_message: The user's message to respond to
+            system_prompt: System prompt defining chatbot behavior
+            conversation_context: Optional conversation ID for context
+            
+        Returns:
+            AI-generated chatbot response string
+        """
+        try:
+            # Build conversation messages
+            messages = [
+                {
+                    "role": "user",
+                    "content": user_message
+                }
+            ]
+            
+            # Generate chatbot response using Claude
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=self._max_tokens,
+                temperature=0.7,  # Slightly higher temperature for conversational responses
+                system=system_prompt,
+                messages=messages
+            )
+            
+            # Extract and return response text
+            return response.content[0].text.strip()
+            
+        except Exception as e:
+            print(f"Error generating chatbot response: {str(e)}")
+            # Return fallback response
+            return ("I apologize, but I'm having trouble processing your message right now. "
+                   "Please feel free to contact us directly for assistance.")
+    
+    def extract_lead_information(self, message: str) -> Optional[Dict[str, Any]]:
+        """Extract lead information from user message using AI.
+        
+        Args:
+            message: User's message to analyze
+            
+        Returns:
+            Dictionary with extracted lead information or None
+        """
+        try:
+            # Prompt for lead information extraction
+            extraction_prompt = f"""
+            Analyze the following message and extract any lead information that might be present.
+            Look for: name, company, email, phone, specific business needs, industry, location.
+            
+            Message: "{message}"
+            
+            Return a JSON object with any extracted information. Use these keys:
+            - first_name: extracted first name
+            - last_name: extracted last name  
+            - company: company name
+            - email: email address
+            - phone: phone number
+            - needs: specific business needs mentioned
+            - industry: industry or business type
+            - location: location mentioned
+            
+            Only include keys where you found actual information. If no clear information is found, return an empty object {{}}.
+            """
+            
+            # Generate extraction using Claude
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=1024,
+                temperature=0.1,  # Low temperature for accurate extraction
+                messages=[
+                    {
+                        "role": "user", 
+                        "content": extraction_prompt
+                    }
+                ]
+            )
+            
+            # Parse JSON response
+            response_text = response.content[0].text.strip()
+            
+            # Extract JSON from response
+            if '{' in response_text and '}' in response_text:
+                json_start = response_text.find('{')
+                json_end = response_text.rfind('}') + 1
+                json_str = response_text[json_start:json_end]
+                
+                extracted_info = json.loads(json_str)
+                
+                # Return extracted info if any fields found
+                if extracted_info and any(extracted_info.values()):
+                    return extracted_info
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error extracting lead information: {str(e)}")
+            return None
 
 
 # Global AI client instance

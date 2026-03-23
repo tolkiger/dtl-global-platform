@@ -27,6 +27,10 @@ _HANDLER_ROUTE_SPECS: list[tuple[str, str]] = [
     ("notify", "notify"),  # Notifications endpoint
     ("crm-import", "crm_import"),  # CRM CSV import endpoint
     ("onboard", "onboard"),  # Orchestrator endpoint
+    ("chatbot", "chatbot"),  # AI chatbot endpoint
+    ("workspace", "workspace"),  # Google Workspace email setup endpoint
+    ("whatsapp", "whatsapp"),  # WhatsApp Business API endpoint
+    ("collaboration", "collaboration"),  # Slack/Teams integration endpoint
 ]
 
 
