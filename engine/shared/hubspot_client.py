@@ -16,9 +16,9 @@ Author: DTL-Global Platform
 import json
 from typing import Dict, List, Optional, Any, Union
 from hubspot import HubSpot
-from hubspot.crm.contacts import SimplePublicObjectInput, ApiException
+from hubspot.crm.contacts import SimplePublicObjectInputForCreate, ApiException
 from hubspot.crm.companies import SimplePublicObjectInput as CompanyInput
-from hubspot.crm.deals import SimplePublicObjectInput as DealInput
+from hubspot.crm.deals import SimplePublicObjectInputForCreate as DealInput
 from hubspot.crm.pipelines import PipelineInput, PipelineStageInput
 
 from config import config
@@ -68,7 +68,7 @@ class HubSpotClient:
         
         try:
             # Create contact input object
-            contact_input = SimplePublicObjectInput(properties=contact_data)
+            contact_input = SimplePublicObjectInputForCreate(properties=contact_data)
             
             # Call HubSpot API to create contact
             response = self._client.crm.contacts.basic_api.create(
@@ -201,7 +201,7 @@ class HubSpotClient:
         
         try:
             # Create deal input object
-            deal_input = SimplePublicObjectInput(properties=deal_data)
+            deal_input = DealInput(properties=deal_data)
             
             # Call HubSpot API to create deal
             response = self._client.crm.deals.basic_api.create(
