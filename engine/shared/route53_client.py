@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Any, Union
 from botocore.exceptions import ClientError
 import time
 
-import config
+from config import config
 
 
 class Route53Client:

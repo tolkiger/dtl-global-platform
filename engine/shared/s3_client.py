@@ -21,7 +21,7 @@ from botocore.exceptions import ClientError
 from pathlib import Path
 import os
 
-import config
+from config import config
 
 
 class S3Client:

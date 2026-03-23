@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Any, Union
 from anthropic import Anthropic
 from anthropic.types import Message
 
-import config
+from config import config
 
 
 class AIClient:
