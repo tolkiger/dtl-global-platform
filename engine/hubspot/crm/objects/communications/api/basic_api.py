@@ -43,7 +43,7 @@ class BasicApi(object):
         >>> thread = api.archive(communication_id, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the message to update. (required)
         :type communication_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -73,7 +73,7 @@ class BasicApi(object):
         >>> thread = api.archive_with_http_info(communication_id, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the message to update. (required)
         :type communication_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -292,7 +292,7 @@ class BasicApi(object):
         >>> thread = api.get_by_id(communication_id, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the message to retrieve. (required)
         :type communication_id: str
         :param properties: A comma separated list of the properties to be returned in the response. If any of the specified properties are not present on the requested object(s), they will be ignored.
         :type properties: list[str]
@@ -302,7 +302,7 @@ class BasicApi(object):
         :type associations: list[str]
         :param archived: Whether to return only results that have been archived.
         :type archived: bool
-        :param id_property: The name of a property whose values are unique for this object type
+        :param id_property: The name of a property whose values are unique for this object
         :type id_property: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -332,7 +332,7 @@ class BasicApi(object):
         >>> thread = api.get_by_id_with_http_info(communication_id, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the message to retrieve. (required)
         :type communication_id: str
         :param properties: A comma separated list of the properties to be returned in the response. If any of the specified properties are not present on the requested object(s), they will be ignored.
         :type properties: list[str]
@@ -342,7 +342,7 @@ class BasicApi(object):
         :type associations: list[str]
         :param archived: Whether to return only results that have been archived.
         :type archived: bool
-        :param id_property: The name of a property whose values are unique for this object type
+        :param id_property: The name of a property whose values are unique for this object
         :type id_property: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -594,18 +594,18 @@ class BasicApi(object):
     def update(self, communication_id, simple_public_object_input, **kwargs):  # noqa: E501
         """Update  # noqa: E501
 
-        Perform a partial update of an Object identified by `{communicationId}`. `{communicationId}` refers to the internal object ID by default, or optionally any unique property value as specified by the `idProperty` query param. Provided property values will be overwritten. Read-only and non-existent properties will be ignored. Properties values can be cleared by passing an empty string.  # noqa: E501
+        Perform a partial update of an Object identified by `{communicationId}`or optionally a unique property value as specified by the `idProperty` query param. `{communicationId}` refers to the internal object ID by default, and the `idProperty` query param refers to a property whose values are unique for the object. Provided property values will be overwritten. Read-only and non-existent properties will result in an error. Properties values can be cleared by passing an empty string.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update(communication_id, simple_public_object_input, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the communication to update. (required)
         :type communication_id: str
         :param simple_public_object_input: (required)
         :type simple_public_object_input: SimplePublicObjectInput
-        :param id_property: The name of a property whose values are unique for this object type
+        :param id_property: The name of a property whose values are unique for this object
         :type id_property: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -628,18 +628,18 @@ class BasicApi(object):
     def update_with_http_info(self, communication_id, simple_public_object_input, **kwargs):  # noqa: E501
         """Update  # noqa: E501
 
-        Perform a partial update of an Object identified by `{communicationId}`. `{communicationId}` refers to the internal object ID by default, or optionally any unique property value as specified by the `idProperty` query param. Provided property values will be overwritten. Read-only and non-existent properties will be ignored. Properties values can be cleared by passing an empty string.  # noqa: E501
+        Perform a partial update of an Object identified by `{communicationId}`or optionally a unique property value as specified by the `idProperty` query param. `{communicationId}` refers to the internal object ID by default, and the `idProperty` query param refers to a property whose values are unique for the object. Provided property values will be overwritten. Read-only and non-existent properties will result in an error. Properties values can be cleared by passing an empty string.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update_with_http_info(communication_id, simple_public_object_input, async_req=True)
         >>> result = thread.get()
 
-        :param communication_id: (required)
+        :param communication_id: The ID of the communication to update. (required)
         :type communication_id: str
         :param simple_public_object_input: (required)
         :type simple_public_object_input: SimplePublicObjectInput
-        :param id_property: The name of a property whose values are unique for this object type
+        :param id_property: The name of a property whose values are unique for this object
         :type id_property: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional

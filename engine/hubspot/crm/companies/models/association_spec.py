@@ -56,6 +56,7 @@ class AssociationSpec(object):
     def association_category(self):
         """Gets the association_category of this AssociationSpec.  # noqa: E501
 
+        For [labeled associations](https://developers.hubspot.com/docs/guides/api/crm/associations/associations-v4#associate-records-with-a-label), the category of the association.  # noqa: E501
 
         :return: The association_category of this AssociationSpec.  # noqa: E501
         :rtype: str
@@ -66,6 +67,7 @@ class AssociationSpec(object):
     def association_category(self, association_category):
         """Sets the association_category of this AssociationSpec.
 
+        For [labeled associations](https://developers.hubspot.com/docs/guides/api/crm/associations/associations-v4#associate-records-with-a-label), the category of the association.  # noqa: E501
 
         :param association_category: The association_category of this AssociationSpec.  # noqa: E501
         :type association_category: str
@@ -82,6 +84,7 @@ class AssociationSpec(object):
     def association_type_id(self):
         """Gets the association_type_id of this AssociationSpec.  # noqa: E501
 
+        The [association type ID](https://developers.hubspot.com/docs/guides/api/crm/associations/associations-v4#association-type-id-values) (e.g., `4` for contact-to-company associations).  # noqa: E501
 
         :return: The association_type_id of this AssociationSpec.  # noqa: E501
         :rtype: int
@@ -92,6 +95,7 @@ class AssociationSpec(object):
     def association_type_id(self, association_type_id):
         """Sets the association_type_id of this AssociationSpec.
 
+        The [association type ID](https://developers.hubspot.com/docs/guides/api/crm/associations/associations-v4#association-type-id-values) (e.g., `4` for contact-to-company associations).  # noqa: E501
 
         :param association_type_id: The association_type_id of this AssociationSpec.  # noqa: E501
         :type association_type_id: int

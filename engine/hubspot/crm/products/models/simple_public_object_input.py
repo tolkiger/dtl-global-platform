@@ -48,14 +48,12 @@ class SimplePublicObjectInput(object):
         self._properties = None
         self.discriminator = None
 
-        if properties is not None:
-            self.properties = properties
+        self.properties = properties
 
     @property
     def properties(self):
         """Gets the properties of this SimplePublicObjectInput.  # noqa: E501
 
-          # noqa: E501
 
         :return: The properties of this SimplePublicObjectInput.  # noqa: E501
         :rtype: dict[str, str]
@@ -66,11 +64,12 @@ class SimplePublicObjectInput(object):
     def properties(self, properties):
         """Sets the properties of this SimplePublicObjectInput.
 
-          # noqa: E501
 
         :param properties: The properties of this SimplePublicObjectInput.  # noqa: E501
         :type properties: dict[str, str]
         """
+        if self.local_vars_configuration.client_side_validation and properties is None:  # noqa: E501
+            raise ValueError("Invalid value for `properties`, must not be `None`")  # noqa: E501
 
         self._properties = properties
 

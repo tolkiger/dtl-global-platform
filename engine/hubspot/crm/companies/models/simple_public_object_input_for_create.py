@@ -49,7 +49,8 @@ class SimplePublicObjectInputForCreate(object):
         self._properties = None
         self.discriminator = None
 
-        self.associations = associations
+        if associations is not None:
+            self.associations = associations
         self.properties = properties
 
     @property
@@ -70,8 +71,6 @@ class SimplePublicObjectInputForCreate(object):
         :param associations: The associations of this SimplePublicObjectInputForCreate.  # noqa: E501
         :type associations: list[PublicAssociationsForObject]
         """
-        if self.local_vars_configuration.client_side_validation and associations is None:  # noqa: E501
-            raise ValueError("Invalid value for `associations`, must not be `None`")  # noqa: E501
 
         self._associations = associations
 
@@ -79,6 +78,7 @@ class SimplePublicObjectInputForCreate(object):
     def properties(self):
         """Gets the properties of this SimplePublicObjectInputForCreate.  # noqa: E501
 
+        The company property values to set.  # noqa: E501
 
         :return: The properties of this SimplePublicObjectInputForCreate.  # noqa: E501
         :rtype: dict[str, str]
@@ -89,6 +89,7 @@ class SimplePublicObjectInputForCreate(object):
     def properties(self, properties):
         """Sets the properties of this SimplePublicObjectInputForCreate.
 
+        The company property values to set.  # noqa: E501
 
         :param properties: The properties of this SimplePublicObjectInputForCreate.  # noqa: E501
         :type properties: dict[str, str]

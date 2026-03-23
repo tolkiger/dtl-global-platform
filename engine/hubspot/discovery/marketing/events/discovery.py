@@ -4,8 +4,8 @@ from ...discovery_base import DiscoveryBase
 
 class Discovery(DiscoveryBase):
     @property
-    def attendance_subscriber_state_changes_api(self) -> api_client.AttendanceSubscriberStateChangesApi:
-        return self._configure_api_client(api_client, "AttendanceSubscriberStateChangesApi")
+    def add_event_attendees_api(self) -> api_client.AddEventAttendeesApi:
+        return self._configure_api_client(api_client, "AddEventAttendeesApi")
 
     @property
     def basic_api(self) -> api_client.BasicApi:
@@ -16,12 +16,20 @@ class Discovery(DiscoveryBase):
         return self._configure_api_client(api_client, "BatchApi")
 
     @property
-    def marketing_events_external_api(self) -> api_client.MarketingEventsExternalApi:
-        return self._configure_api_client(api_client, "MarketingEventsExternalApi")
+    def change_property_api(self) -> api_client.ChangePropertyApi:
+        return self._configure_api_client(api_client, "ChangePropertyApi")
 
     @property
-    def search_api(self) -> api_client.SearchApi:
-        return self._configure_api_client(api_client, "SearchApi")
+    def identifiers_api(self) -> api_client.IdentifiersApi:
+        return self._configure_api_client(api_client, "IdentifiersApi")
+
+    @property
+    def list_associations_api(self) -> api_client.ListAssociationsApi:
+        return self._configure_api_client(api_client, "ListAssociationsApi")
+
+    @property
+    def retrieve_participant_state_api(self) -> api_client.RetrieveParticipantStateApi:
+        return self._configure_api_client(api_client, "RetrieveParticipantStateApi")
 
     @property
     def settings_api(self) -> api_client.SettingsApi:
