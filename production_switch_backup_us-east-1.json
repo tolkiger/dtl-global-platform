@@ -1,0 +1,25 @@
+{
+  "timestamp": "us-east-1",
+  "parameters": {
+    "/dtl-global-platform/anthropic/api_key": {
+      "type": "SecureString",
+      "exists": true
+    },
+    "/dtl-global-platform/github/codestar_connection_arn": {
+      "type": "SecureString",
+      "exists": true
+    },
+    "/dtl-global-platform/hubspot/token": {
+      "type": "SecureString",
+      "exists": true
+    },
+    "/dtl-global-platform/stripe/connect_client_id": {
+      "type": "SecureString",
+      "exists": true
+    },
+    "/dtl-global-platform/stripe/secret": {
+      "type": "SecureString",
+      "exists": true
+    }
+  }
+}

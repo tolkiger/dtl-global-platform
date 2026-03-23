@@ -25,6 +25,24 @@ Before any customer interaction:
 - [ ] Pricing sheets and service packages prepared
 - [ ] Contract templates and legal documents ready
 
+## Quick Customer Type Recognition
+
+When user mentions these keywords, immediately identify the customer type:
+
+| Keywords | Customer Type | Package |
+|----------|---------------|---------|
+| "friends and family", "free website", "family discount" | `friends_family` | Friends and Family ($0/$20) |
+| "free website discounted maintenance", "charity discount" | `free_website_discounted` | Free Website + Discounted ($0/$29) |
+| "discounted maintenance", "existing customer", "referral" | `discounted_maintenance` | Discounted Maintenance ($49) |
+| "website maintenance", "maintenance only", "existing website" | `maintenance_only` | Website + Maintenance ($99) |
+| "website crm maintenance", "maintenance plus crm" | `maintenance_plus_crm` | Website + CRM + Maintenance ($149) |
+| "starter", "basic website", "website only" | `website_only` | Starter ($500/$49) |
+| "crm payments only", "no website", "payments only" | `crm_payments_only` | CRM + Payments Only ($750/$99) |
+| "website crm no payments", "no stripe", "website and crm" | `website_crm_no_payments` | Website + CRM ($875/$99) |
+| "growth", "crm and payments", "full package" | `full_package` | Growth ($1250/$149) |
+| "professional", "ai chatbot", "crm import" | `full_package_plus` | Professional ($2500/$249) |
+| "premium", "custom automations", "enterprise" | `premium_custom` | Premium ($4000+/$399+) |
+
 ## Customer Onboarding Workflow
 
 ### Phase 1: Initial Consultation (30 minutes)
@@ -43,17 +61,81 @@ Before any customer interaction:
 - Address concerns and questions immediately
 
 **Package Recommendation:**
-- Analyze their needs against our 4 client types:
-  - **TYPE A**: Full Package (DNS, Website, CRM, Stripe, Email, Notify)
-  - **TYPE B**: Website + Email Only (DNS, Website, Email optional, Notify)
-  - **TYPE C**: Website + CRM (DNS, Website, CRM, Notify)
-  - **TYPE D**: CRM + Payments Only (CRM, Stripe, Notify)
+- Analyze their needs against our client types and service packages below
 
-**Service Packages:**
-- **Starter**: $500 setup / $49 monthly (Website + SEO + Hosting)
-- **Growth**: $1,250 setup / $149 monthly (Starter + CRM + Payments + Email)
-- **Professional**: $2,500 setup / $249 monthly (Growth + AI Chatbot + CRM Import)
-- **Premium**: $4,000+ setup / $399+ monthly (Professional + Custom Automations)
+## Client Types and Service Packages
+
+### Standard Service Packages
+
+**FRIENDS AND FAMILY**: $0 setup / $20 monthly
+- **Client Type**: `friends_family`
+- **Services**: Website hosting and basic maintenance only
+- **Includes**: DNS, Website, Notify
+- **Keywords**: "friends and family", "free website", "family discount", "$20 monthly"
+
+**STARTER**: $500 setup / $49 monthly  
+- **Client Type**: `website_only`
+- **Services**: Website + SEO + Hosting
+- **Includes**: DNS, Website, Email (optional +$100), Notify
+- **Keywords**: "starter", "basic website", "website only", "$500 setup"
+
+**GROWTH**: $1,250 setup / $149 monthly
+- **Client Type**: `full_package`
+- **Services**: Everything in Starter + CRM + Payments + Email
+- **Includes**: DNS, Website, CRM, Stripe, Email, Notify
+- **Keywords**: "growth", "crm and payments", "full package", "$1250 setup"
+
+**PROFESSIONAL**: $2,500 setup / $249 monthly
+- **Client Type**: `full_package_plus`
+- **Services**: Everything in Growth + AI Chatbot + CRM Import
+- **Includes**: DNS, Website, CRM, Stripe, Email, Notify, Chatbot, CRM Import
+- **Keywords**: "professional", "ai chatbot", "crm import", "$2500 setup"
+
+**PREMIUM**: $4,000+ setup / $399+ monthly
+- **Client Type**: `premium_custom`
+- **Services**: Everything in Professional + Custom Automations
+- **Includes**: DNS, Website, CRM, Stripe, Email, Notify, Chatbot, CRM Import, Custom Features
+- **Keywords**: "premium", "custom automations", "enterprise", "$4000+ setup"
+
+### Maintenance-Only Packages
+
+**WEBSITE + MAINTENANCE**: $99 monthly (no setup fee)
+- **Client Type**: `maintenance_only`
+- **Services**: Existing website maintenance and hosting
+- **Includes**: Hosting, Updates, Monitoring, Support
+- **Keywords**: "website maintenance", "maintenance only", "existing website", "$99 monthly"
+
+**WEBSITE + CRM + MAINTENANCE**: $149 monthly (no setup fee)
+- **Client Type**: `maintenance_plus_crm`
+- **Services**: Website maintenance + CRM management
+- **Includes**: Website maintenance + CRM setup and management
+- **Keywords**: "website crm maintenance", "crm management", "maintenance plus crm"
+
+**DISCOUNTED MAINTENANCE**: $49 monthly (for existing customers)
+- **Client Type**: `discounted_maintenance`
+- **Services**: Reduced-rate maintenance for referrals/existing customers
+- **Includes**: Basic hosting, updates, limited support
+- **Keywords**: "discounted maintenance", "existing customer", "referral discount", "$49 maintenance"
+
+### Custom/Special Packages
+
+**CRM + PAYMENTS ONLY**: $750 setup / $99 monthly
+- **Client Type**: `crm_payments_only`
+- **Services**: CRM setup and payment processing (no website)
+- **Includes**: CRM, Stripe, Notify
+- **Keywords**: "crm payments only", "no website", "crm setup", "payments only"
+
+**WEBSITE + CRM (No Payments)**: $875 setup / $99 monthly
+- **Client Type**: `website_crm_no_payments`
+- **Services**: Website and CRM without payment processing
+- **Includes**: DNS, Website, CRM, Notify
+- **Keywords**: "website crm no payments", "no stripe", "website and crm"
+
+**FREE WEBSITE + DISCOUNTED MAINTENANCE**: $0 setup / $29 monthly
+- **Client Type**: `free_website_discounted`
+- **Services**: Free website setup with discounted ongoing maintenance
+- **Includes**: DNS, Website, Basic Support
+- **Keywords**: "free website discounted maintenance", "free setup", "$29 monthly", "charity discount"
 
 ### Phase 2: Proposal & Contract (24 hours)
 

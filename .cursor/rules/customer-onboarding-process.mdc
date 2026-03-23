@@ -37,6 +37,21 @@ This skill contains:
 - "Going to production" → Reference production setup checklist
 - "Real customer process" → Reference entire skill
 
+### Customer Type Keywords
+
+**Immediately identify customer type when user mentions:**
+- "friends and family", "free website", "family discount" → Friends & Family ($0/$20)
+- "free website discounted maintenance", "charity discount" → Free Website + Discounted ($0/$29)
+- "discounted maintenance", "existing customer", "referral" → Discounted Maintenance ($49)
+- "website maintenance", "maintenance only" → Website + Maintenance ($99)
+- "website crm maintenance", "maintenance plus crm" → Website + CRM + Maintenance ($149)
+- "starter", "basic website", "website only" → Starter ($500/$49)
+- "crm payments only", "no website" → CRM + Payments Only ($750/$99)
+- "website crm no payments", "no stripe" → Website + CRM ($875/$99)
+- "growth", "full package" → Growth ($1250/$149)
+- "professional", "ai chatbot" → Professional ($2500/$249)
+- "premium", "custom automations" → Premium ($4000+/$399+)
+
 ### Key Process Gates
 
 1. **Pre-Customer**: System readiness verification
