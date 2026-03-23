@@ -7,7 +7,6 @@
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": true,
     "githubOwner": "tolkiger",
-    "githubRepo": "dtl-global-platform",
-    "domainName": "dtl-global.org"
+    "githubRepo": "dtl-global-platform"
   }
 }

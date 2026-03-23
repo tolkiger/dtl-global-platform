@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.5.1
+# DTL-Global Platform — Master Build Plan v2.6.0
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.5.1 — CDN stack clarified: serves CLIENT websites only, not DTL-Global corporate site)
+> **Updated:** 2026-03-22 (v2.6.0 — MAJOR: Removed domain requirements entirely, simplified to 4 stacks, follows Rule 003 No Over-Engineering)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,9 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.6.0 | **MAJOR simplification**: Removed domain requirements entirely per Rule 003 (No Over-Engineering); deleted DNS, SSL, Email stacks; reduced from 7 to 4 stacks (Storage, CDN, API, Pipeline); uses default AWS URLs and simple SES email verification; eliminates unnecessary complexity for Phase 1 |
+| v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
+| v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
 | v2.5.1 | **CDN stack correction**: CloudFront distribution serves **CLIENT websites** (e.g., `clientname.com`) added programmatically during onboarding — **NOT** DTL-Global's corporate site. No `dtl-global.org` domains in CDN stack. Corporate site stays on existing deployment. |
 | v2.5.0 | Phase 1 CDK: website S3 bucket in CDN stack with CloudFront **Origin Access Control (OAC)** (not legacy OAI + deprecated `S3Origin`); Storage stack holds 2 S3 buckets + 3 DynamoDB tables; **CodePipeline V2**; `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` on all stacks; `aws-cdk-lib>=2.180`, `constructs>=10.4`; **dtl-global.org**: corporate site may stay on a separate CDK app — registrar/NS changes only if you delegate DNS to this account |
 | v2.4.1 | SSM parameter paths changed from /dtl/{param} to /dtl-global-platform/{param} to match repo naming convention |
@@ -108,7 +111,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 
 ## 1. Cursor Rules and Coding Standards
 
-### 1.1 Summary of 12 Rules
+### 1.1 Summary of 13 Rules
 
 | Rule | Name | What It Enforces |
 |------|------|-----------------|
@@ -124,6 +127,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 | 010 | Secrets Management | SSM Parameter Store (/dtl-global-platform/), never hardcode |
 | 011 | 100% Serverless | No EC2, no containers, no always-on compute |
 | 012 | GitFlow | Feature branches, issues, PRs, non-interactive CLI |
+| 013 | Latest Constructs Only | Never use deprecated CDK constructs, always use current best practices |
 
 ### 1.2 Cursor Skills
 
@@ -179,6 +183,22 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 | CloudWatch Logs | Lambda logs (auto) | 5GB free |
 
 NOT ALLOWED: EC2, ECS, EKS, Fargate, Amplify, AppSync, Cognito, Step Functions, EventBridge, SQS, SNS, RDS, Aurora, ElastiCache, any monitoring tools.
+
+### 3.1 Cost Optimization Principles
+
+The platform is designed for maximum cost efficiency while maintaining functionality:
+
+| Optimization | Implementation | Monthly Savings |
+|-------------|----------------|-----------------|
+| **S3-Managed Encryption** | Pipeline artifacts use SSE-S3 instead of KMS | ~$1.00 (KMS key) + $0.10-0.50 (API calls) |
+| **CloudWatch Log Retention** | All Lambda functions: 30-day retention | Variable ($0-10+ depending on log volume) |
+| **S3 Lifecycle Rules** | Assets bucket: IA after 30 days, Glacier after 90 days | Variable (depends on asset accumulation) |
+| **CloudFront Price Class** | Price Class 100 (US/Canada/Europe) vs Global | 20-40% savings on CloudFront costs |
+| **DynamoDB On-Demand** | Pay-per-request vs provisioned capacity | Optimal for variable/low traffic |
+
+**Total Estimated Savings**: $1.60-11.50/month from optimizations
+
+**Cost Monitoring**: All stacks tagged with `Project=dtl-global-platform` for AWS Cost Explorer tracking.
 
 ---
 
@@ -349,25 +369,25 @@ Create GitHub Issue, then feature branch from main.
 
 Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
 
-### 9.3 What Gets Created (seven stacks)
+### 9.3 What Gets Created (four stacks)
 
 | Stack | Resources |
 |-------|-----------|
 | **Storage** | 3 DynamoDB tables (`dtl-industry-templates`, `dtl-clients`, `dtl-onboarding-state`) + **2** S3 buckets (`dtl-assets-{account}`, `dtl-csv-imports-{account}`) |
-| **CDN** | **Client websites** S3 bucket (`dtl-client-websites-{account}`) + **CloudFront** distribution using **S3 Origin Access Control (OAC)** — serves **client sites** (e.g., `clientname.com`) added programmatically during onboarding, **NOT** DTL-Global corporate domains |
-| **DNS** | Route 53 **public hosted zone** for `dtl-global.org` (ACM DNS validation records only — **no** `www` alias to CloudFront since corporate site is separate) |
-| **SSL** | ACM certificate (DNS validation in the hosted zone) |
-| **Email** | SES domain identity for `dtl-global.org` |
-| **API** | API Gateway REST (12 POST routes) + 12 Lambda functions (Python 3.12, 256MB, 5min) |
+| **CDN** | **Client websites** S3 bucket (`dtl-client-websites-{account}`) + **CloudFront** distribution using **S3 Origin Access Control (OAC)** — serves **client sites** via default CloudFront URL |
+| **API** | API Gateway REST (12 POST routes) + 12 Lambda functions (Python 3.12, 256MB, 5min) — uses default API Gateway URL |
 | **Pipeline** | CodePipeline **V2** + CodeBuild (`buildspec.yml`), source = GitHub via **existing** CodeStar connection |
 
 **Why the website bucket lives in the CDN stack:** CDK `S3BucketOrigin.with_origin_access_control(bucket)` ties bucket policy to the CloudFront distribution. Putting the bucket and distribution in **one** stack avoids a cyclic dependency between Storage and CDN stacks.
 
 **CDK app conventions (`cdk/app.py`):** Every stack uses `DefaultStackSynthesizer(generate_bootstrap_version_rule=False)` so templates do not add the bootstrap-version SSM rule (operator preference after bootstrap).
 
-### 9.3a dtl-global.org — corporate site vs this platform
+### 9.3a No Custom Domains (Simplified Approach)
 
-The **public marketing website** at **dtl-global.org** may already be live and deployed by a **different CDK application** (another repo). In that case you do **not** need to change the **domain registrar** or nameservers for the sake of this platform: DNS for the apex can keep pointing at whatever currently serves that site.
+**Phase 1 uses default AWS URLs** to avoid over-engineering:
+- **API Gateway**: Uses default `https://{api-id}.execute-api.{region}.amazonaws.com/prod/` URLs
+- **CloudFront**: Uses default `https://{distribution-id}.cloudfront.net/` URLs  
+- **SES Email**: Uses individual email address verification instead of domain verification
 
 This repo’s **Route 53 hosted zone** and records (e.g. `www` → client-site CloudFront, ACM validation) are for **onboarding platform** infrastructure. If you keep apex DNS at another provider, add the **same** records there (ACM CNAMEs, `www` alias/CNAME) or delegate a **subdomain** (e.g. `platform.dtl-global.org`) to this account’s zone instead of moving the whole domain.
 
@@ -659,7 +679,7 @@ READY TO ONBOARD — Switch Stripe to PRODUCTION
     WEBSITE_BUCKET=dtl-client-websites-{account_id}
     ASSETS_BUCKET=dtl-assets-{account_id}
     CSV_IMPORT_BUCKET=dtl-csv-imports-{account_id}
-    SES_FROM_EMAIL=onboarding@dtl-global.org
+    SES_FROM_EMAIL=noreply@dtl-global.org
 
 ## Appendix B: Python Dependencies
 

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import os  # Resolve filesystem paths to the Lambda source bundle
 
-from aws_cdk import Duration, Stack, Tags  # CDK core helpers
+from aws_cdk import Duration, RemovalPolicy, Stack, Tags  # CDK core helpers
 from aws_cdk import aws_apigateway as apigateway  # REST API constructs
 from aws_cdk import aws_dynamodb as dynamodb  # DynamoDB table references
 from aws_cdk import aws_iam as iam  # IAM policies for Lambda roles
 from aws_cdk import aws_lambda as lambda_  # Lambda function constructs
+from aws_cdk import aws_logs as logs  # CloudWatch Logs for retention policies
 from aws_cdk import aws_s3 as s3  # S3 bucket references
 from constructs import Construct  # Base construct class
 
@@ -76,7 +77,7 @@ class ApiStack(Stack):
             "WEBSITE_BUCKET": website_bucket.bucket_name,  # Website bucket name
             "ASSETS_BUCKET": assets_bucket.bucket_name,  # Assets bucket name
             "CSV_IMPORT_BUCKET": csv_import_bucket.bucket_name,  # CSV import bucket name
-            "SES_FROM_EMAIL": "onboarding@dtl-global.org",  # Default SES sender per master plan
+            "SES_FROM_EMAIL": "noreply@dtl-global.org",  # Default SES sender (requires manual SES email verification)
         }  # End common environment dict
         rest_api = apigateway.RestApi(  # Public REST API for onboarding
             self,  # Parent construct is this stack
@@ -94,6 +95,13 @@ class ApiStack(Stack):
         for route_path, module_suffix in _HANDLER_ROUTE_SPECS:  # Create one Lambda + route per handler
             handler_id = f"handler_{module_suffix}"  # Python module name without .py
             function_name = f"dtl-onboarding-{module_suffix.replace('_', '-')}"  # AWS Lambda function name
+            log_group = logs.LogGroup(  # Explicit log group with retention for cost optimization
+                self,  # Parent construct is this stack
+                f"LogGroup{module_suffix.title().replace('_', '')}",  # Stable logical id per handler log group
+                log_group_name=f"/aws/lambda/{function_name}",  # Standard Lambda log group naming convention
+                retention=logs.RetentionDays.ONE_MONTH,  # 30-day log retention for cost optimization
+                removal_policy=RemovalPolicy.DESTROY,  # Allow log group cleanup when stack is deleted
+            )  # End log group definition
             lambda_function = lambda_.Function(  # Python 3.12 function with shared code bundle
                 self,  # Parent construct is this stack
                 f"Lambda{module_suffix.title().replace('_', '')}",  # Stable logical id per handler
@@ -104,6 +112,7 @@ class ApiStack(Stack):
                 memory_size=256,  # Memory size per master plan baseline
                 environment=common_environment,  # Inject shared configuration
                 function_name=function_name,  # Predictable name in the Lambda console
+                log_group=log_group,  # Use explicit log group instead of deprecated log_retention
             )  # End Lambda function definition
             templates_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for templates
             clients_table.grant_read_write_data(lambda_function)  # Allow DynamoDB access for clients
