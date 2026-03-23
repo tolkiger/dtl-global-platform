@@ -71,7 +71,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'phone': client_info.get('phone', ''),
             'industry': client_info.get('industry', ''),
             'lifecyclestage': 'customer',
-            'lead_source': 'dtl_global_onboarding'
         }
         
         # Check if contact exists
