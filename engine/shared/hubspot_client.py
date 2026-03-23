@@ -72,7 +72,7 @@ class HubSpotClient:
             
             # Call HubSpot API to create contact
             response = self._client.crm.contacts.basic_api.create(
-                simple_public_object_input=contact_input
+                simple_public_object_input_for_create=contact_input
             )
             
             # Return contact data with HubSpot ID
@@ -201,11 +201,11 @@ class HubSpotClient:
         
         try:
             # Create deal input object
-            deal_input = DealInput(properties=deal_data)
+            deal_input = SimplePublicObjectInput(properties=deal_data)
             
             # Call HubSpot API to create deal
             response = self._client.crm.deals.basic_api.create(
-                simple_public_object_input=deal_input
+                simple_public_object_input_for_create=deal_input
             )
             
             # Return deal data with HubSpot ID

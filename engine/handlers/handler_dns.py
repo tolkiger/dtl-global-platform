@@ -24,9 +24,8 @@ if engine_root not in sys.path:
 if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
-# Import shared modules directly
+# Import config only - clients will be imported in handler
 from config import config
-from route53_client import route53_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -34,8 +33,27 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"DNS configuration started - Request ID: {context.aws_request_id}")
     
     try:
-        request_data = json.loads(event['body'])
-        domain = request_data['domain']
+        # Import Route53 client inside handler to avoid initialization issues during testing
+        from route53_client import route53_client
+        
+        # Handle both API Gateway format (with body) and direct format (for testing)
+        if event.get('body'):
+            # API Gateway format
+            request_data = json.loads(event['body'])
+        else:
+            # Direct format (for testing)
+            request_data = event
+            
+        domain = request_data.get('domain')
+        if not domain:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'error': 'Missing required parameter: domain',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            }
+            
         action = request_data.get('action', 'setup')
         
         if action == 'setup':

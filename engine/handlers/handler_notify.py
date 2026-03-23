@@ -24,9 +24,8 @@ if engine_root not in sys.path:
 if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
-# Import shared modules directly
+# Import config only - clients will be imported in handler
 from config import config
-from ses_client import ses_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -34,9 +33,29 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"Notification handler started - Request ID: {context.aws_request_id}")
     
     try:
-        request_data = json.loads(event['body'])
-        notification_type = request_data['notification_type']
-        client_info = request_data['client_info']
+        # Import SES client inside handler to avoid initialization issues during testing
+        from ses_client import ses_client
+        
+        # Handle both API Gateway format (with body) and direct format (for testing)
+        if event.get('body'):
+            # API Gateway format
+            request_data = json.loads(event['body'])
+        else:
+            # Direct format (for testing)
+            request_data = event
+            
+        notification_type = request_data.get('notification_type')
+        client_info = request_data.get('client_info', {})
+        
+        # Validate required parameters
+        if not client_info.get('email'):
+            return {
+                'statusCode': 400,
+                'body': json.dumps({
+                    'error': 'Missing required parameter: email in client_info',
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            }
         
         if notification_type == 'welcome':
             # Send welcome email
@@ -48,7 +67,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             result = ses_client.send_onboarding_welcome(
                 client_email=client_info['email'],
-                client_name=client_info['name'],
+                client_name=client_info.get('contact_name', client_info.get('name', 'Customer')),
                 project_details=project_details
             )
             
@@ -57,7 +76,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             status_data = request_data.get('status_data', {})
             result = ses_client.send_status_update(
                 client_email=client_info['email'],
-                client_name=client_info['name'],
+                client_name=client_info.get('contact_name', client_info.get('name', 'Customer')),
                 status_data=status_data
             )
             
