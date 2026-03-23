@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Any, Union
 from decimal import Decimal
 from datetime import datetime, timedelta
 
-from .config import config, STRIPE_CONFIG
+from config import config, STRIPE_CONFIG
 
 
 class StripeClient:

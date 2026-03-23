@@ -18,10 +18,18 @@ from datetime import datetime, timedelta
 # Import shared modules
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'shared'))
 
-from shared.config import config
-from shared.hubspot_client import hubspot_client
+# Add both the engine root and shared directory to path
+engine_root = os.path.dirname(os.path.dirname(__file__))
+shared_path = os.path.join(engine_root, 'shared')
+if engine_root not in sys.path:
+    sys.path.insert(0, engine_root)
+if shared_path not in sys.path:
+    sys.path.insert(0, shared_path)
+
+# Now import with direct module names
+import config
+import hubspot_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
