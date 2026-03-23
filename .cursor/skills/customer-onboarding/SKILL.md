@@ -32,7 +32,7 @@ When user mentions these keywords, immediately identify the customer type:
 | Keywords | Customer Type | Package |
 |----------|---------------|---------|
 | "friends and family", "free website", "family discount" | `friends_family` | Friends and Family ($0/$20) |
-| "free website discounted maintenance", "charity discount" | `free_website_discounted` | Free Website + Discounted ($0/$29) |
+| "free website discounted maintenance", "charity discount" | `free_website_discounted` | Free Website + Discounted ($0/$20) |
 | "discounted maintenance", "existing customer", "referral" | `discounted_maintenance` | Discounted Maintenance ($49) |
 | "website maintenance", "maintenance only", "existing website" | `maintenance_only` | Website + Maintenance ($99) |
 | "website crm maintenance", "maintenance plus crm" | `maintenance_plus_crm` | Website + CRM + Maintenance ($149) |
@@ -131,7 +131,7 @@ When user mentions these keywords, immediately identify the customer type:
 - **Includes**: DNS, Website, CRM, Notify
 - **Keywords**: "website crm no payments", "no stripe", "website and crm"
 
-**FREE WEBSITE + DISCOUNTED MAINTENANCE**: $0 setup / $29 monthly
+**FREE WEBSITE + DISCOUNTED MAINTENANCE**: $0 setup / $20 monthly
 - **Client Type**: `free_website_discounted`
 - **Services**: Free website setup with discounted ongoing maintenance
 - **Includes**: DNS, Website, Basic Support
@@ -232,8 +232,27 @@ python scripts/phase0_stripe_setup.py --live-mode
 - Gather all required assets and information
 
 **Technical Implementation Start:**
+
+**RECOMMENDED: Use Automated Onboarding Script**
 ```bash
-# Initialize customer onboarding workflow
+# Quick onboarding (finds project automatically)
+python scripts/onboard_customer.py {company_name}
+
+# Or use full automation script
+python scripts/automated_customer_onboarding.py \
+  --customer-file customer_projects/{company_name}/{project_id}.json
+```
+
+**Rocket.new Integration Workflow:**
+1. **Website Export from Rocket.new**:
+   - Open project in Rocket.new Code View
+   - Click GitHub icon → "Create new repository" 
+   - Repository name will be: `{company-name}-website`
+   - Click "Push" to export (Rocket.new handles Git setup)
+
+2. **Alternative: Manual API Workflow**
+```bash
+# Initialize customer onboarding workflow manually
 curl -X POST https://your-api-gateway/prod/onboard \
   -H "Content-Type: application/json" \
   -d '{
@@ -250,11 +269,42 @@ curl -X POST https://your-api-gateway/prod/onboard \
   }'
 ```
 
+**Automated Script Benefits:**
+- Makes all API calls automatically
+- Creates organized project directories
+- Generates customer documentation
+- Handles error recovery gracefully
+- Provides detailed progress reporting
+- Integrates with Rocket.new GitHub export workflow
+- Automatically detects GitHub repositories created by Rocket.new
+
 **Progress Communication:**
 - Send daily progress updates via email
 - Weekly milestone review calls
 - Immediate notification of any issues or delays
 - Regular demos of work in progress
+
+### Rocket.new Integration Process
+
+**Important**: DTL-Global uses Rocket.new for website development. The platform automatically handles GitHub repository creation and export.
+
+**Rocket.new Workflow:**
+1. **Development**: Website built in Rocket.new platform
+2. **Export**: Use Code View → GitHub icon → "Push to GitHub"
+3. **Repository Naming**: Rocket.new creates repo as `{company-name}-website`
+4. **Integration**: Our automation scripts detect the new repository
+5. **Deployment**: GitHub repo connects to AWS S3 via GitHub Actions
+
+**Key Points:**
+- ✅ **DO NOT** manually create GitHub repositories
+- ✅ **DO** let Rocket.new handle the Git setup and export
+- ✅ **DO** use our automation to detect the exported repository
+- ✅ **DO** verify the repository name matches expected pattern
+
+**Expected Repository Names:**
+- Business Center Solutions → `businesscentersolutions-website`
+- Acme Corp → `acmecorp-website`
+- John's Consulting → `johnsconsulting-website`
 
 ### Phase 5: Testing & Delivery (Week 2-3)
 

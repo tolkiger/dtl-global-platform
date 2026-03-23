@@ -258,7 +258,7 @@ TYPE D: CRM + PAYMENTS ONLY — CRM, Stripe, Notify
 - **PREMIUM**: $4,000+ setup / $399+ monthly — Professional + Custom Automations
 
 **Maintenance-Only Packages:**
-- **FREE WEBSITE + DISCOUNTED**: $0 setup / $29 monthly — Free website with discounted maintenance
+- **FREE WEBSITE + DISCOUNTED**: $0 setup / $20 monthly — Free website with discounted maintenance
 - **DISCOUNTED MAINTENANCE**: $49 monthly — Reduced-rate maintenance for existing customers
 - **WEBSITE + MAINTENANCE**: $99 monthly — Website maintenance and hosting only
 - **WEBSITE + CRM + MAINTENANCE**: $149 monthly — Website maintenance + CRM management
@@ -655,12 +655,33 @@ The platform now supports 11 customer types with automatic keyword recognition:
 - Production setup procedures
 - Quality assurance gates
 
-**Production Setup Script**: `scripts/switch_to_production.py`
+**Documentation Organization**:
+- `docs/` - All project documentation
+- `docs/operations/` - Operational guides (REAL_CUSTOMER_PREP.md)
+- `docs/DEMO_SCRIPT.md` - Customer demonstration guide
+- `docs/AUTHENTICATION.md` - API authentication setup
+
+**Customer Project Organization**:
+- `customer_projects/{company_name}/` - Individual company directories (lowercase, underscores)
+- `customer_projects/{company_name}/{PROJECT_ID}.json` - Project data
+- `customer_projects/{company_name}/DNS_Instructions.md` - DNS setup guide
+- `customer_projects/{company_name}/Project_Summary.md` - Project overview
+- `customer_projects/{company_name}/Customer_Training_Guide.md` - Training materials
+
+**Rocket.new Integration**:
+- Websites developed in Rocket.new platform
+- GitHub repositories created automatically via Rocket.new export
+- Repository naming: `{company-name}-website` (Rocket.new handles this)
+- Our automation detects and integrates with exported repositories
 - Automated Stripe live mode switch
 - Security checks and verification
 - Backup and rollback capabilities
 
-**Customer Starter Script**: `scripts/start_customer_onboarding.py`
+**Customer Onboarding Scripts**: 
+- `scripts/start_customer_onboarding.py` (interactive data collection)
+- `scripts/automated_customer_onboarding.py` (full API automation with Rocket.new integration)
+- `scripts/onboard_customer.py` (quick wrapper)
+- `scripts/switch_to_production.py` (Stripe live mode setup)
 - Interactive customer information collection
 - Project setup and documentation
 - Next steps guidance
