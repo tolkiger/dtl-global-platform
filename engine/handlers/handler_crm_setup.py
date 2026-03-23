@@ -20,8 +20,8 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'shared'))
 
-from config import config
-from hubspot_client import hubspot_client
+from shared.config import config
+from shared.hubspot_client import hubspot_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
