@@ -17,7 +17,9 @@ from __future__ import absolute_import
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from hubspot.cms.blogs.blog_posts.api.blog_posts_api import BlogPostsApi
+from hubspot.cms.blogs.blog_posts.api.basic_api import BasicApi
+from hubspot.cms.blogs.blog_posts.api.batch_api import BatchApi
+from hubspot.cms.blogs.blog_posts.api.multi_language_api import MultiLanguageApi
 
 # import ApiClient
 from hubspot.cms.blogs.blog_posts.api_client import ApiClient
@@ -40,6 +42,7 @@ from hubspot.cms.blogs.blog_posts.models.batch_response_blog_post import BatchRe
 from hubspot.cms.blogs.blog_posts.models.batch_response_blog_post_with_errors import BatchResponseBlogPostWithErrors
 from hubspot.cms.blogs.blog_posts.models.blog_post import BlogPost
 from hubspot.cms.blogs.blog_posts.models.blog_post_language_clone_request_v_next import BlogPostLanguageCloneRequestVNext
+from hubspot.cms.blogs.blog_posts.models.breakpoint_styles import BreakpointStyles
 from hubspot.cms.blogs.blog_posts.models.collection_response_with_total_blog_post_forward_paging import CollectionResponseWithTotalBlogPostForwardPaging
 from hubspot.cms.blogs.blog_posts.models.collection_response_with_total_version_blog_post import CollectionResponseWithTotalVersionBlogPost
 from hubspot.cms.blogs.blog_posts.models.color_stop import ColorStop

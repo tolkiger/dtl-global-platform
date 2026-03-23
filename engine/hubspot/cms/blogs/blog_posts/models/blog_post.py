@@ -87,8 +87,8 @@ class BlogPost(object):
         "rss_summary": "str",
         "page_expiry_enabled": "bool",
         "url": "str",
-        "public_access_rules": "list[object]",
         "enable_google_amp_output_override": "bool",
+        "public_access_rules": "list[object]",
         "archived_at": "int",
         "post_body": "str",
         "theme_settings_values": "dict[str, object]",
@@ -151,8 +151,8 @@ class BlogPost(object):
         "rss_summary": "rssSummary",
         "page_expiry_enabled": "pageExpiryEnabled",
         "url": "url",
-        "public_access_rules": "publicAccessRules",
         "enable_google_amp_output_override": "enableGoogleAmpOutputOverride",
+        "public_access_rules": "publicAccessRules",
         "archived_at": "archivedAt",
         "post_body": "postBody",
         "theme_settings_values": "themeSettingsValues",
@@ -216,8 +216,8 @@ class BlogPost(object):
         rss_summary=None,
         page_expiry_enabled=None,
         url=None,
-        public_access_rules=None,
         enable_google_amp_output_override=None,
+        public_access_rules=None,
         archived_at=None,
         post_body=None,
         theme_settings_values=None,
@@ -284,8 +284,8 @@ class BlogPost(object):
         self._rss_summary = None
         self._page_expiry_enabled = None
         self._url = None
-        self._public_access_rules = None
         self._enable_google_amp_output_override = None
+        self._public_access_rules = None
         self._archived_at = None
         self._post_body = None
         self._theme_settings_values = None
@@ -347,8 +347,8 @@ class BlogPost(object):
         self.rss_summary = rss_summary
         self.page_expiry_enabled = page_expiry_enabled
         self.url = url
-        self.public_access_rules = public_access_rules
         self.enable_google_amp_output_override = enable_google_amp_output_override
+        self.public_access_rules = public_access_rules
         self.archived_at = archived_at
         self.post_body = post_body
         self.theme_settings_values = theme_settings_values
@@ -387,7 +387,7 @@ class BlogPost(object):
     def language(self):
         """Gets the language of this BlogPost.  # noqa: E501
 
-        The explicitly defined ISO 639 language code of the Blog Post. If null, the Blog Post will default to the language of the ParentBlog.  # noqa: E501
+        The explicitly defined ISO 639 language code of the post. If null, the post will default to the language of the parent blog.  # noqa: E501
 
         :return: The language of this BlogPost.  # noqa: E501
         :rtype: str
@@ -398,7 +398,7 @@ class BlogPost(object):
     def language(self, language):
         """Sets the language of this BlogPost.
 
-        The explicitly defined ISO 639 language code of the Blog Post. If null, the Blog Post will default to the language of the ParentBlog.  # noqa: E501
+        The explicitly defined ISO 639 language code of the post. If null, the post will default to the language of the parent blog.  # noqa: E501
 
         :param language: The language of this BlogPost.  # noqa: E501
         :type language: str
@@ -563,7 +563,9 @@ class BlogPost(object):
             "en-dg",
             "en-dk",
             "en-dm",
+            "en-ee",
             "en-er",
+            "en-fr",
             "en-fi",
             "en-fj",
             "en-fk",
@@ -1270,7 +1272,7 @@ class BlogPost(object):
     def html_title(self):
         """Gets the html_title of this BlogPost.  # noqa: E501
 
-        The html title of this Blog Post.  # noqa: E501
+        The HTML title of the post.  # noqa: E501
 
         :return: The html_title of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1281,7 +1283,7 @@ class BlogPost(object):
     def html_title(self, html_title):
         """Sets the html_title of this BlogPost.
 
-        The html title of this Blog Post.  # noqa: E501
+        The HTML title of the post.  # noqa: E501
 
         :param html_title: The html_title of this BlogPost.  # noqa: E501
         :type html_title: str
@@ -1343,7 +1345,7 @@ class BlogPost(object):
     def id(self):
         """Gets the id of this BlogPost.  # noqa: E501
 
-        The unique ID of the Blog Post.  # noqa: E501
+        The unique ID of the blog post.  # noqa: E501
 
         :return: The id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1354,7 +1356,7 @@ class BlogPost(object):
     def id(self, id):
         """Sets the id of this BlogPost.
 
-        The unique ID of the Blog Post.  # noqa: E501
+        The unique ID of the blog post.  # noqa: E501
 
         :param id: The id of this BlogPost.  # noqa: E501
         :type id: str
@@ -1368,7 +1370,7 @@ class BlogPost(object):
     def state(self):
         """Gets the state of this BlogPost.  # noqa: E501
 
-        An ENUM descibing the current state of this Blog Post.  # noqa: E501
+        An enumeration describing the current publish state of the post.  # noqa: E501
 
         :return: The state of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1379,7 +1381,7 @@ class BlogPost(object):
     def state(self, state):
         """Sets the state of this BlogPost.
 
-        An ENUM descibing the current state of this Blog Post.  # noqa: E501
+        An enumeration describing the current publish state of the post.  # noqa: E501
 
         :param state: The state of this BlogPost.  # noqa: E501
         :type state: str
@@ -1395,7 +1397,7 @@ class BlogPost(object):
     def slug(self):
         """Gets the slug of this BlogPost.  # noqa: E501
 
-        The path of the this blog post. This field is appended to the domain to construct the url of this post.  # noqa: E501
+        The URL slug of the blog post. This field is appended to the domain to construct the url of this post.  # noqa: E501
 
         :return: The slug of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1406,7 +1408,7 @@ class BlogPost(object):
     def slug(self, slug):
         """Sets the slug of this BlogPost.
 
-        The path of the this blog post. This field is appended to the domain to construct the url of this post.  # noqa: E501
+        The URL slug of the blog post. This field is appended to the domain to construct the url of this post.  # noqa: E501
 
         :param slug: The slug of this BlogPost.  # noqa: E501
         :type slug: str
@@ -1420,7 +1422,7 @@ class BlogPost(object):
     def created_by_id(self):
         """Gets the created_by_id of this BlogPost.  # noqa: E501
 
-        The ID of the user that created this Blog Post.  # noqa: E501
+        The ID of the user that created the post.  # noqa: E501
 
         :return: The created_by_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1431,7 +1433,7 @@ class BlogPost(object):
     def created_by_id(self, created_by_id):
         """Sets the created_by_id of this BlogPost.
 
-        The ID of the user that created this Blog Post.  # noqa: E501
+        The ID of the user that created the post.  # noqa: E501
 
         :param created_by_id: The created_by_id of this BlogPost.  # noqa: E501
         :type created_by_id: str
@@ -1559,7 +1561,7 @@ class BlogPost(object):
         """
         if self.local_vars_configuration.client_side_validation and content_type_category is None:  # noqa: E501
             raise ValueError("Invalid value for `content_type_category`, must not be `None`")  # noqa: E501
-        allowed_values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]  # noqa: E501
+        allowed_values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]  # noqa: E501
         if self.local_vars_configuration.client_side_validation and content_type_category not in allowed_values:  # noqa: E501
             raise ValueError("Invalid value for `content_type_category` ({0}), must be one of {1}".format(content_type_category, allowed_values))  # noqa: E501
 
@@ -1594,7 +1596,7 @@ class BlogPost(object):
     def updated_by_id(self):
         """Gets the updated_by_id of this BlogPost.  # noqa: E501
 
-        The ID of the user that updated this Blog Post.  # noqa: E501
+        The ID of the user that updated the post.  # noqa: E501
 
         :return: The updated_by_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1605,7 +1607,7 @@ class BlogPost(object):
     def updated_by_id(self, updated_by_id):
         """Sets the updated_by_id of this BlogPost.
 
-        The ID of the user that updated this Blog Post.  # noqa: E501
+        The ID of the user that updated the post.  # noqa: E501
 
         :param updated_by_id: The updated_by_id of this BlogPost.  # noqa: E501
         :type updated_by_id: str
@@ -1619,7 +1621,7 @@ class BlogPost(object):
     def translated_from_id(self):
         """Gets the translated_from_id of this BlogPost.  # noqa: E501
 
-        ID of the primary blog post this object was translated from.  # noqa: E501
+        ID of the primary blog post that this post was translated from.  # noqa: E501
 
         :return: The translated_from_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1630,7 +1632,7 @@ class BlogPost(object):
     def translated_from_id(self, translated_from_id):
         """Sets the translated_from_id of this BlogPost.
 
-        ID of the primary blog post this object was translated from.  # noqa: E501
+        ID of the primary blog post that this post was translated from.  # noqa: E501
 
         :param translated_from_id: The translated_from_id of this BlogPost.  # noqa: E501
         :type translated_from_id: str
@@ -1767,7 +1769,7 @@ class BlogPost(object):
     def author_name(self):
         """Gets the author_name of this BlogPost.  # noqa: E501
 
-        The name of the user that updated this Blog Post.  # noqa: E501
+        The name of the blog author associated with the post.  # noqa: E501
 
         :return: The author_name of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1778,7 +1780,7 @@ class BlogPost(object):
     def author_name(self, author_name):
         """Sets the author_name of this BlogPost.
 
-        The name of the user that updated this Blog Post.  # noqa: E501
+        The name of the blog author associated with the post.  # noqa: E501
 
         :param author_name: The author_name of this BlogPost.  # noqa: E501
         :type author_name: str
@@ -1792,7 +1794,7 @@ class BlogPost(object):
     def domain(self):
         """Gets the domain of this BlogPost.  # noqa: E501
 
-        The domain this Blog Post will resolve to. If null, the Blog Post will default to the domain of the ParentBlog.  # noqa: E501
+        The domain that the post lives on. If null, the post will default to the domain of the parent blog.  # noqa: E501
 
         :return: The domain of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1803,7 +1805,7 @@ class BlogPost(object):
     def domain(self, domain):
         """Sets the domain of this BlogPost.
 
-        The domain this Blog Post will resolve to. If null, the Blog Post will default to the domain of the ParentBlog.  # noqa: E501
+        The domain that the post lives on. If null, the post will default to the domain of the parent blog.  # noqa: E501
 
         :param domain: The domain of this BlogPost.  # noqa: E501
         :type domain: str
@@ -1817,7 +1819,7 @@ class BlogPost(object):
     def name(self):
         """Gets the name of this BlogPost.  # noqa: E501
 
-        The internal name of the Blog Post.  # noqa: E501
+        The internal name of the post.  # noqa: E501
 
         :return: The name of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1828,7 +1830,7 @@ class BlogPost(object):
     def name(self, name):
         """Sets the name of this BlogPost.
 
-        The internal name of the Blog Post.  # noqa: E501
+        The internal name of the post.  # noqa: E501
 
         :param name: The name of this BlogPost.  # noqa: E501
         :type name: str
@@ -1842,7 +1844,7 @@ class BlogPost(object):
     def dynamic_page_hub_db_table_id(self):
         """Gets the dynamic_page_hub_db_table_id of this BlogPost.  # noqa: E501
 
-        The ID of the HubDB table this Blog Post references, if applicable  # noqa: E501
+        For dynamic HubDB pages,  the ID of the HubDB table this post references.  # noqa: E501
 
         :return: The dynamic_page_hub_db_table_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1853,7 +1855,7 @@ class BlogPost(object):
     def dynamic_page_hub_db_table_id(self, dynamic_page_hub_db_table_id):
         """Sets the dynamic_page_hub_db_table_id of this BlogPost.
 
-        The ID of the HubDB table this Blog Post references, if applicable  # noqa: E501
+        For dynamic HubDB pages,  the ID of the HubDB table this post references.  # noqa: E501
 
         :param dynamic_page_hub_db_table_id: The dynamic_page_hub_db_table_id of this BlogPost.  # noqa: E501
         :type dynamic_page_hub_db_table_id: str
@@ -1867,7 +1869,7 @@ class BlogPost(object):
     def campaign(self):
         """Gets the campaign of this BlogPost.  # noqa: E501
 
-        The GUID of the marketing campaign this Blog Post is a part of.  # noqa: E501
+        The GUID of the marketing campaign the post is associated with.  # noqa: E501
 
         :return: The campaign of this BlogPost.  # noqa: E501
         :rtype: str
@@ -1878,7 +1880,7 @@ class BlogPost(object):
     def campaign(self, campaign):
         """Sets the campaign of this BlogPost.
 
-        The GUID of the marketing campaign this Blog Post is a part of.  # noqa: E501
+        The GUID of the marketing campaign the post is associated with.  # noqa: E501
 
         :param campaign: The campaign of this BlogPost.  # noqa: E501
         :type campaign: str
@@ -2038,7 +2040,7 @@ class BlogPost(object):
     def tag_ids(self):
         """Gets the tag_ids of this BlogPost.  # noqa: E501
 
-        List of IDs for the tags associated with this Blog Post.  # noqa: E501
+        The IDs of the tags associated with this post.  # noqa: E501
 
         :return: The tag_ids of this BlogPost.  # noqa: E501
         :rtype: list[int]
@@ -2049,7 +2051,7 @@ class BlogPost(object):
     def tag_ids(self, tag_ids):
         """Sets the tag_ids of this BlogPost.
 
-        List of IDs for the tags associated with this Blog Post.  # noqa: E501
+        The IDs of the tags associated with this post.  # noqa: E501
 
         :param tag_ids: The tag_ids of this BlogPost.  # noqa: E501
         :type tag_ids: list[int]
@@ -2191,7 +2193,7 @@ class BlogPost(object):
     def use_featured_image(self):
         """Gets the use_featured_image of this BlogPost.  # noqa: E501
 
-        Boolean to determine if this post should use a featuredImage.  # noqa: E501
+        Boolean to determine if this post should use a featured image.  # noqa: E501
 
         :return: The use_featured_image of this BlogPost.  # noqa: E501
         :rtype: bool
@@ -2202,7 +2204,7 @@ class BlogPost(object):
     def use_featured_image(self, use_featured_image):
         """Sets the use_featured_image of this BlogPost.
 
-        Boolean to determine if this post should use a featuredImage.  # noqa: E501
+        Boolean to determine if this post should use a featured image.  # noqa: E501
 
         :param use_featured_image: The use_featured_image of this BlogPost.  # noqa: E501
         :type use_featured_image: bool
@@ -2266,7 +2268,7 @@ class BlogPost(object):
     def blog_author_id(self):
         """Gets the blog_author_id of this BlogPost.  # noqa: E501
 
-        The ID of the Blog Author associated with this Blog Post.  # noqa: E501
+        The ID of the blog author associated with this post.  # noqa: E501
 
         :return: The blog_author_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -2277,7 +2279,7 @@ class BlogPost(object):
     def blog_author_id(self, blog_author_id):
         """Sets the blog_author_id of this BlogPost.
 
-        The ID of the Blog Author associated with this Blog Post.  # noqa: E501
+        The ID of the blog author associated with this post.  # noqa: E501
 
         :param blog_author_id: The blog_author_id of this BlogPost.  # noqa: E501
         :type blog_author_id: str
@@ -2291,7 +2293,7 @@ class BlogPost(object):
     def content_group_id(self):
         """Gets the content_group_id of this BlogPost.  # noqa: E501
 
-        The ID of the parent Blog this Blog Post is associated with.  # noqa: E501
+        The ID of the post's parent blog.  # noqa: E501
 
         :return: The content_group_id of this BlogPost.  # noqa: E501
         :rtype: str
@@ -2302,7 +2304,7 @@ class BlogPost(object):
     def content_group_id(self, content_group_id):
         """Sets the content_group_id of this BlogPost.
 
-        The ID of the parent Blog this Blog Post is associated with.  # noqa: E501
+        The ID of the post's parent blog.  # noqa: E501
 
         :param content_group_id: The content_group_id of this BlogPost.  # noqa: E501
         :type content_group_id: str
@@ -2388,31 +2390,6 @@ class BlogPost(object):
         self._url = url
 
     @property
-    def public_access_rules(self):
-        """Gets the public_access_rules of this BlogPost.  # noqa: E501
-
-        Rules for require member registration to access private content.  # noqa: E501
-
-        :return: The public_access_rules of this BlogPost.  # noqa: E501
-        :rtype: list[object]
-        """
-        return self._public_access_rules
-
-    @public_access_rules.setter
-    def public_access_rules(self, public_access_rules):
-        """Sets the public_access_rules of this BlogPost.
-
-        Rules for require member registration to access private content.  # noqa: E501
-
-        :param public_access_rules: The public_access_rules of this BlogPost.  # noqa: E501
-        :type public_access_rules: list[object]
-        """
-        if self.local_vars_configuration.client_side_validation and public_access_rules is None:  # noqa: E501
-            raise ValueError("Invalid value for `public_access_rules`, must not be `None`")  # noqa: E501
-
-        self._public_access_rules = public_access_rules
-
-    @property
     def enable_google_amp_output_override(self):
         """Gets the enable_google_amp_output_override of this BlogPost.  # noqa: E501
 
@@ -2436,6 +2413,31 @@ class BlogPost(object):
             raise ValueError("Invalid value for `enable_google_amp_output_override`, must not be `None`")  # noqa: E501
 
         self._enable_google_amp_output_override = enable_google_amp_output_override
+
+    @property
+    def public_access_rules(self):
+        """Gets the public_access_rules of this BlogPost.  # noqa: E501
+
+        Rules for require member registration to access private content.  # noqa: E501
+
+        :return: The public_access_rules of this BlogPost.  # noqa: E501
+        :rtype: list[object]
+        """
+        return self._public_access_rules
+
+    @public_access_rules.setter
+    def public_access_rules(self, public_access_rules):
+        """Sets the public_access_rules of this BlogPost.
+
+        Rules for require member registration to access private content.  # noqa: E501
+
+        :param public_access_rules: The public_access_rules of this BlogPost.  # noqa: E501
+        :type public_access_rules: list[object]
+        """
+        if self.local_vars_configuration.client_side_validation and public_access_rules is None:  # noqa: E501
+            raise ValueError("Invalid value for `public_access_rules`, must not be `None`")  # noqa: E501
+
+        self._public_access_rules = public_access_rules
 
     @property
     def archived_at(self):
@@ -2626,7 +2628,7 @@ class BlogPost(object):
     def category_id(self):
         """Gets the category_id of this BlogPost.  # noqa: E501
 
-        ID of the type of object this is. Should always .  # noqa: E501
+        ID of the object type.  # noqa: E501
 
         :return: The category_id of this BlogPost.  # noqa: E501
         :rtype: int
@@ -2637,7 +2639,7 @@ class BlogPost(object):
     def category_id(self, category_id):
         """Sets the category_id of this BlogPost.
 
-        ID of the type of object this is. Should always .  # noqa: E501
+        ID of the object type.  # noqa: E501
 
         :param category_id: The category_id of this BlogPost.  # noqa: E501
         :type category_id: int

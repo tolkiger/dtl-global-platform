@@ -41,6 +41,7 @@ class SimplePublicObject(object):
         "archived_at": "datetime",
         "properties_with_history": "dict[str, list[ValueWithTimestamp]]",
         "id": "str",
+        "object_write_trace_id": "str",
         "properties": "dict[str, str]",
         "updated_at": "datetime",
     }
@@ -51,11 +52,14 @@ class SimplePublicObject(object):
         "archived_at": "archivedAt",
         "properties_with_history": "propertiesWithHistory",
         "id": "id",
+        "object_write_trace_id": "objectWriteTraceId",
         "properties": "properties",
         "updated_at": "updatedAt",
     }
 
-    def __init__(self, created_at=None, archived=None, archived_at=None, properties_with_history=None, id=None, properties=None, updated_at=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(
+        self, created_at=None, archived=None, archived_at=None, properties_with_history=None, id=None, object_write_trace_id=None, properties=None, updated_at=None, local_vars_configuration=None
+    ):  # noqa: E501
         """SimplePublicObject - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration.get_default_copy()
@@ -66,6 +70,7 @@ class SimplePublicObject(object):
         self._archived_at = None
         self._properties_with_history = None
         self._id = None
+        self._object_write_trace_id = None
         self._properties = None
         self._updated_at = None
         self.discriminator = None
@@ -78,8 +83,9 @@ class SimplePublicObject(object):
         if properties_with_history is not None:
             self.properties_with_history = properties_with_history
         self.id = id
-        if properties is not None:
-            self.properties = properties
+        if object_write_trace_id is not None:
+            self.object_write_trace_id = object_write_trace_id
+        self.properties = properties
         self.updated_at = updated_at
 
     @property
@@ -192,6 +198,27 @@ class SimplePublicObject(object):
         self._id = id
 
     @property
+    def object_write_trace_id(self):
+        """Gets the object_write_trace_id of this SimplePublicObject.  # noqa: E501
+
+
+        :return: The object_write_trace_id of this SimplePublicObject.  # noqa: E501
+        :rtype: str
+        """
+        return self._object_write_trace_id
+
+    @object_write_trace_id.setter
+    def object_write_trace_id(self, object_write_trace_id):
+        """Sets the object_write_trace_id of this SimplePublicObject.
+
+
+        :param object_write_trace_id: The object_write_trace_id of this SimplePublicObject.  # noqa: E501
+        :type object_write_trace_id: str
+        """
+
+        self._object_write_trace_id = object_write_trace_id
+
+    @property
     def properties(self):
         """Gets the properties of this SimplePublicObject.  # noqa: E501
 
@@ -209,6 +236,8 @@ class SimplePublicObject(object):
         :param properties: The properties of this SimplePublicObject.  # noqa: E501
         :type properties: dict[str, str]
         """
+        if self.local_vars_configuration.client_side_validation and properties is None:  # noqa: E501
+            raise ValueError("Invalid value for `properties`, must not be `None`")  # noqa: E501
 
         self._properties = properties
 
