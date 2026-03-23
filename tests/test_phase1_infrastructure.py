@@ -36,18 +36,15 @@ class TestPhase1Infrastructure(unittest.TestCase):
             "CDK output directory not found. Run 'cdk synth' first."  # Error message for missing output
         )  # End CDK output verification
 
-    def test_all_seven_stacks_exist(self) -> None:
-        """Verify all 7 Phase 1 stacks have CloudFormation templates.
+    def test_all_four_stacks_exist(self) -> None:
+        """Verify all 4 Phase 1 stacks have CloudFormation templates.
         
-        Per DTL_MASTER_PLAN.md Section 9.3: Storage, CDN, DNS, SSL, Email, API, Pipeline
+        Per DTL_MASTER_PLAN.md v2.6.0 Section 9.3: Storage, CDN, API, Pipeline (simplified from 7 to 4 stacks)
         """
-        # Expected stack names from master plan Section 9.3
+        # Expected stack names from master plan v2.6.0 Section 9.3
         expected_stacks = [  # List of all Phase 1 stack names
             "DtlStorage",  # DynamoDB tables and S3 buckets
             "DtlCdn",  # CloudFront distribution and client websites bucket
-            "DtlDns",  # Route 53 hosted zone
-            "DtlSsl",  # ACM certificate
-            "DtlEmail",  # SES domain identity
             "DtlApi",  # API Gateway and Lambda functions
             "DtlPipeline",  # CodePipeline and CodeBuild
         ]  # End expected stacks list
@@ -110,6 +107,45 @@ class TestPhase1Infrastructure(unittest.TestCase):
             len(s3_buckets), 2,  # Expected count is 2 buckets (assets + CSV import)
             f"Expected 2 S3 buckets in Storage stack, found {len(s3_buckets)}: {s3_buckets}"  # Error message with details
         )  # End S3 bucket count assertion
+
+    def test_cdn_stack_resources(self) -> None:
+        """Verify CDN stack contains client websites S3 bucket and CloudFront distribution.
+        
+        Per DTL_MASTER_PLAN.md v2.6.0 Section 9.3: Client websites bucket moved to CDN stack
+        """
+        # Load CDN stack template
+        cdn_template_path = self.cdk_out_dir / "DtlCdn.template.json"  # CDN template file path
+        
+        try:  # Attempt to load and parse CDN template
+            with open(cdn_template_path, 'r') as f:  # Open CDN template file
+                cdn_template = json.load(f)  # Parse template JSON content
+                
+        except Exception as e:  # Handle file or JSON errors
+            self.fail(f"Failed to load CDN stack template: {str(e)}")  # Fail test with error details
+            
+        resources = cdn_template.get("Resources", {})  # Extract Resources section from template
+        
+        # Count S3 buckets in CDN stack (client websites bucket)
+        s3_buckets = [  # List comprehension to find S3 bucket resources
+            resource_name for resource_name, resource_data in resources.items()  # Iterate through all resources
+            if resource_data.get("Type") == "AWS::S3::Bucket"  # Filter for S3 bucket type
+        ]  # End S3 buckets list comprehension
+        
+        self.assertEqual(  # Assert correct number of S3 buckets in CDN stack
+            len(s3_buckets), 1,  # Expected count is 1 bucket (client websites)
+            f"Expected 1 S3 bucket in CDN stack, found {len(s3_buckets)}: {s3_buckets}"  # Error message with details
+        )  # End S3 bucket count assertion
+        
+        # Count CloudFront distributions
+        cloudfront_distributions = [  # List comprehension to find CloudFront resources
+            resource_name for resource_name, resource_data in resources.items()  # Iterate through all resources
+            if resource_data.get("Type") == "AWS::CloudFront::Distribution"  # Filter for CloudFront distribution type
+        ]  # End CloudFront distributions list comprehension
+        
+        self.assertEqual(  # Assert correct number of CloudFront distributions
+            len(cloudfront_distributions), 1,  # Expected count is 1 distribution
+            f"Expected 1 CloudFront distribution, found {len(cloudfront_distributions)}: {cloudfront_distributions}"  # Error message with details
+        )  # End CloudFront distribution count assertion
 
     def test_api_stack_endpoints(self) -> None:
         """Verify API stack contains 12 Lambda functions and API Gateway routes.

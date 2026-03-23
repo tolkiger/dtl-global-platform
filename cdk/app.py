@@ -25,7 +25,7 @@ def main() -> None:
     )  # End DefaultStackSynthesizer
     github_owner = str(app.node.try_get_context("githubOwner") or "REPLACE_ME")  # GitHub namespace for CodeStar source
     github_repo = str(app.node.try_get_context("githubRepo") or "dtl-global-platform")  # Repository name for pipeline source
-    connection_arn = "arn:aws:codestar-connections:us-east-1:485815740327:connection/8a0201d7-d2cc-4095-b1a1-80556b74c395"  # CodeStar connection ARN (hardcoded since it never changes)
+    connection_arn = str(app.node.try_get_context("connectionArn") or "")  # CodeStar connection ARN from cdk.json context
     storage = StorageStack(app, "DtlStorage", env=env, synthesizer=synthesizer)  # Data plane tables and buckets
     cdn = CdnStack(  # Client websites bucket + CloudFront distribution (no DTL-Global domains)
         app,  # CDK app scope
@@ -54,7 +54,7 @@ def main() -> None:
         synthesizer=synthesizer,  # Same synthesizer as sibling stacks
         github_owner=github_owner,  # GitHub owner for CodeStar source action
         github_repo=github_repo,  # GitHub repo for CodeStar source action
-        connection_arn=connection_arn,  # CodeStar connection ARN from context
+        connection_arn=connection_arn,  # CodeStar connection ARN from cdk.json context
     )  # End pipeline stack
     app.synth()  # Emit CloudFormation templates to cdk.out
 

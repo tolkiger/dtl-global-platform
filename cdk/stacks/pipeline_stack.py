@@ -41,7 +41,7 @@ class PipelineStack(Stack):
             owner=github_owner,  # GitHub namespace
             repo=github_repo,  # Repository name
             branch="main",  # Default branch for deployments
-            connection_arn=connection_arn,  # Existing CodeStar connection ARN
+            connection_arn=connection_arn,  # Connection ARN from CDK context (cdk.json)
             output=source_artifact,  # Feed the build stage
             trigger_on_push=True,  # Start pipeline on pushes to main
         )  # End source action

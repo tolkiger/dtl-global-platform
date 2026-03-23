@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.6.1 | **CodeStar ARN tracking update**: CodeStar connection ARN is now provided manually via `cdk/cdk.json` context key `connectionArn` (not SSM); SSM list reduced to 4 application secrets only |
 | v2.6.0 | **MAJOR simplification**: Removed domain requirements entirely per Rule 003 (No Over-Engineering); deleted DNS, SSL, Email stacks; reduced from 7 to 4 stacks (Storage, CDN, API, Pipeline); uses default AWS URLs and simple SES email verification; eliminates unnecessary complexity for Phase 1 |
 | v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
 | v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
@@ -34,8 +35,9 @@
 | HubSpot Phase 0 | Done — verify ALL CHECKS PASSED |
 | Stripe Phase 0 | Confirm — run phase0_stripe_setup / verify (SANDBOX mode) |
 | AWS SSM (Phase 0.5) | Done — setup + verify scripts |
-| Phase 1 (CDK) | Implemented — `cdk deploy` / verify resources (see Section 9) |
-| Phases 2-6 | Not started |
+| Phase 1 (CDK) | Implemented — 4 stacks (Storage, CDN, API, Pipeline); `cdk deploy` / verify (Section 9) |
+| Phase 2 (Lambdas) | In progress — shared modules (config, HubSpot, Stripe, …) per Section 10 |
+| Phases 3-6 | Not started |
 
 ---
 
@@ -157,7 +159,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
     |   +-- setup_ssm_parameters.py       (Phase 0.5)
     |   +-- verify_ssm_parameters.py
     |   +-- seed_templates.py
-    +-- cdk/app.py, cdk.json, requirements.txt, stacks/ (7 stacks)
+    +-- cdk/app.py, cdk.json, requirements.txt, stacks/ (4 stacks: Storage, CDN, API, Pipeline — v2.6.0)
     +-- engine/shared/ (7 modules), handlers/ (12 handlers), templates/
     +-- tests/
 
@@ -328,7 +330,6 @@ Parameters to create (NOTE: /dtl-global-platform/ prefix):
     /dtl-global-platform/stripe/secret                  — Stripe Secret Key (sk_test_...)
     /dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID (ca_...)
     /dtl-global-platform/anthropic/api_key              — Anthropic Claude API key
-    /dtl-global-platform/github/codestar_connection_arn — Existing CodeStar connection ARN
 
 Safety checks:
 - Stripe key must start with "sk_test_" (refuses live keys)
@@ -337,7 +338,7 @@ Safety checks:
 - Idempotent: skips existing params unless --overwrite flag
 
 Create: scripts/verify_ssm_parameters.py
-- Checks all 5 params exist as SecureString
+- Checks all 4 params exist as SecureString
 - Does NOT print values
 - Reports pass/fail for each
 
@@ -349,7 +350,7 @@ Create: scripts/verify_ssm_parameters.py
 
 SSM:
 [ ] setup_ssm_parameters.py runs without errors
-[ ] verify_ssm_parameters.py reports all 5 parameters exist
+[ ] verify_ssm_parameters.py reports all 4 app secrets exist
 [ ] Stripe SSM parameter uses test key (sk_test_)
 
 GitFlow:
@@ -367,7 +368,7 @@ Create GitHub Issue, then feature branch from main.
 
 ### 9.2 CodeStar Connection
 
-Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
+Already exists. ARN is provided manually in `cdk/cdk.json` as context key `connectionArn`.
 
 ### 9.3 What Gets Created (four stacks)
 
@@ -406,7 +407,7 @@ This repo’s **Route 53 hosted zone** and records (e.g. `www` → client-site C
 [ ] All DynamoDB tables exist
 [ ] All S3 buckets exist: `dtl-client-websites-{account}` (CDN stack), `dtl-assets-{account}`, `dtl-csv-imports-{account}` (Storage stack)
 [ ] API Gateway exists with 12 endpoints
-[ ] CodePipeline **V2** uses EXISTING CodeStar connection (SSM ARN)
+[ ] CodePipeline **V2** uses EXISTING CodeStar connection (from `cdk/cdk.json` `connectionArn`)
 [ ] SES sender verified
 [ ] NO non-serverless resources
 [ ] All commits reference issue number
@@ -622,7 +623,7 @@ AFTER: Push, create PR (--body flag), merge (--squash --delete-branch --yes)
 ## 21. Phase Gate Checklist
 
 BOOTSTRAP — DONE
-[x] All directories, rules (12), skills (4), docs/AUTHENTICATION.md, .gitignore, .env.example, README, __init__.py files created
+[x] All directories, rules (13), skills (4), docs/AUTHENTICATION.md, .gitignore, .env.example, README, __init__.py files created
 [x] MCP servers set up (Cursor native for Stripe, hubspotcli for HubSpot)
 
 PHASE 0 — HubSpot and Stripe
@@ -631,7 +632,7 @@ PHASE 0 — HubSpot and Stripe
 PROCEED TO PHASE 0.5
 
 PHASE 0.5 — SSM Parameters and GitFlow
-[ ] setup_ssm_parameters.py runs (all 5 params under /dtl-global-platform/)
+[ ] setup_ssm_parameters.py runs (all 4 app secrets under /dtl-global-platform/)
 [ ] verify_ssm_parameters.py all pass
 [ ] Stripe SSM uses sk_test_
 [ ] GitHub Project exists
@@ -641,7 +642,7 @@ PROCEED TO PHASE 1
 PHASE 1 — CDK Infrastructure
 [ ] Issue + branch created
 [ ] cdk deploy --all succeeds
-[ ] Section 9.3 resources exist (Storage + CDN + DNS + SSL + Email + API + Pipeline); CodePipeline **V2** + CodeStar
+[ ] Section 9.3 resources exist (**Storage + CDN + API + Pipeline** per v2.6.0); CodePipeline **V2** + CodeStar (connection ARN from `cdk/cdk.json` `connectionArn`)
 [ ] 100% serverless, PR merged
 PROCEED TO PHASE 2
 
@@ -700,9 +701,9 @@ Lambda Layer (engine/requirements.txt):
     /dtl-global-platform/stripe/secret                  — Stripe Secret Key (sk_test_ until production)
     /dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID (ca_...)
     /dtl-global-platform/anthropic/api_key              — Anthropic Claude API key (sk-ant-...)
-    /dtl-global-platform/github/codestar_connection_arn — AWS CodeStar connection ARN
 
 All parameters are SecureString type. Created via scripts/setup_ssm_parameters.py.
+CodeStar connection ARN is configured manually in `cdk/cdk.json` context as `connectionArn`.
 Naming convention matches the repository name: dtl-global-platform.
 
 ## Appendix D: Cursor Quick Reference
@@ -712,7 +713,7 @@ Naming convention matches the repository name: dtl-global-platform.
 3. Check phase status (Section 21)
 4. BEFORE starting a phase: create GitHub Issue + feature branch (Rule 012)
 5. Build ONLY current phase
-6. Follow ALL 12 rules
+6. Follow ALL 13 rules
 7. Make granular commits referencing the issue
 8. Run gate checklist before completing
 9. Push, create PR (--body), merge (--squash --yes)
@@ -722,4 +723,4 @@ Naming convention matches the repository name: dtl-global-platform.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.5.1*
+*End of DTL-Global Platform Master Build Plan v2.6.0*

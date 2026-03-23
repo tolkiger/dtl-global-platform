@@ -37,12 +37,6 @@ _PARAMETER_CONFIG: list[dict[str, Any]] = [
         "use_getpass": True,  # Mask API key
         "require_sk_test_prefix": False,  # Not Stripe
     },
-    {
-        "name": "/dtl-global-platform/github/codestar_connection_arn",  # SSM path for CodeStar connection ARN
-        "label": "GitHub CodeStar connection ARN (/dtl-global-platform/github/codestar_connection_arn)",  # Human label
-        "use_getpass": False,  # ARN is not a short secret; show while typing for verification
-        "require_sk_test_prefix": False,  # Not Stripe
-    },
 ]
 
 
@@ -140,7 +134,7 @@ def _put_secure_string(client: Any, name: str, value: str, overwrite: bool) -> N
 
 
 def main() -> None:
-    """Prompt for five SSM values and create missing SecureString parameters.
+    """Prompt for four SSM values and create missing SecureString parameters.
 
     Returns:
         None: Prints created/skipped summary or exits on validation failure.

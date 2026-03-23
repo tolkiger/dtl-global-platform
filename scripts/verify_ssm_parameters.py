@@ -16,7 +16,6 @@ _EXPECTED_PARAMETERS: list[str] = [
     "/dtl-global-platform/stripe/secret",  # Stripe secret key
     "/dtl-global-platform/stripe/connect_client_id",  # Stripe Connect client id
     "/dtl-global-platform/anthropic/api_key",  # Anthropic API key
-    "/dtl-global-platform/github/codestar_connection_arn",  # CodeStar Connections ARN for GitHub
 ]
 
 

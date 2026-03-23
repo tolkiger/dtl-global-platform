@@ -7,6 +7,7 @@
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": true,
     "githubOwner": "tolkiger",
-    "githubRepo": "dtl-global-platform"
+    "githubRepo": "dtl-global-platform",
+    "connectionArn": "arn:aws:codestar-connections:us-east-1:485815740327:connection/8a0201d7-d2cc-4095-b1a1-80556b74c395"
   }
 }
