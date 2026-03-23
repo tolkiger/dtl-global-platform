@@ -132,6 +132,18 @@ class ApiStack(Stack):
                     resources=[ssm_parameter_arn],  # Restrict to DTL parameter namespace
                 ),  # End policy statement
             )  # End add_to_role_policy
+            lambda_function.add_to_role_policy(  # Allow Route53 operations for DNS setup
+                iam.PolicyStatement(  # Route53 permissions for DNS handler
+                    actions=[
+                        "route53:CreateHostedZone",
+                        "route53:GetHostedZone", 
+                        "route53:ListHostedZones",
+                        "route53:ChangeResourceRecordSets",
+                        "route53:GetChange"
+                    ],  # DNS management actions
+                    resources=["*"],  # Route53 requires wildcard for some operations
+                ),  # End Route53 policy statement
+            )  # End Route53 add_to_role_policy
             resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
             resource.add_method(  # Wire POST to the Lambda integration
                 "POST",  # Onboarding actions are invoked via POST bodies
