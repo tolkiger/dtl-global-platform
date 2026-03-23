@@ -26,10 +26,8 @@ if engine_root not in sys.path:
 if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
-# Import shared modules directly
+# Import config only - clients will be imported in handler
 from config import config
-from stripe_client import stripe_client
-from ses_client import ses_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -69,15 +67,20 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"Subscription management started - Request ID: {context.aws_request_id}")
     
     try:
-        # Parse request body
-        if not event.get('body'):
-            return _create_error_response(400, "Request body is required")
+        # Import clients inside handler to avoid initialization issues during testing
+        from stripe_client import stripe_client
+        from ses_client import ses_client
         
-        # Parse JSON body from API Gateway
-        try:
-            request_data = json.loads(event['body'])
-        except json.JSONDecodeError as e:
-            return _create_error_response(400, f"Invalid JSON in request body: {e}")
+        # Handle both API Gateway format (with body) and direct format (for testing)
+        if event.get('body'):
+            # API Gateway format
+            try:
+                request_data = json.loads(event['body'])
+            except json.JSONDecodeError as e:
+                return _create_error_response(400, f"Invalid JSON in request body: {e}")
+        else:
+            # Direct format (for testing)
+            request_data = event
         
         # Validate required fields
         validation_error = _validate_subscription_request(request_data)

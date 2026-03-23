@@ -33,11 +33,8 @@ if engine_root not in sys.path:
 if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
-# Import shared modules directly
+# Import config only - clients will be imported in handler
 from config import config
-from s3_client import s3_client
-from route53_client import route53_client
-from ai_client import ai_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -79,8 +76,19 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"🚀 Website deployment orchestration started - Request ID: {context.aws_request_id}")
     
     try:
-        # Parse and validate request
-        request_data = json.loads(event['body'])
+        # Import clients inside handler to avoid initialization issues during testing
+        from s3_client import s3_client
+        from route53_client import route53_client
+        from ai_client import ai_client
+        
+        # Handle both API Gateway format (with body) and direct format (for testing)
+        if event.get('body'):
+            # API Gateway format
+            request_data = json.loads(event['body'])
+        else:
+            # Direct format (for testing)
+            request_data = event
+            
         validation_error = _validate_deployment_request(request_data)
         if validation_error:
             return _create_error_response(400, validation_error)

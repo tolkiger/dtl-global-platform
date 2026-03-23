@@ -126,7 +126,7 @@ class SESClient:
             # Handle SES API errors
             error_code = e.response['Error']['Code']
             error_msg = f"Failed to send email: {error_code} - {e.response['Error']['Message']}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def send_onboarding_welcome(self, client_email: str, client_name: str,
                               project_details: Dict[str, Any]) -> Dict[str, Any]:
@@ -449,7 +449,7 @@ Email: {self._default_sender}
         except ClientError as e:
             # Handle SES API errors
             error_msg = f"Failed to verify email {email_address}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def get_send_statistics(self) -> Dict[str, Any]:
         """Get SES sending statistics.
@@ -473,7 +473,7 @@ Email: {self._default_sender}
         except ClientError as e:
             # Handle SES API errors
             error_msg = f"Failed to get send statistics: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def _send_raw_email(self, to_addresses: List[str], subject: str,
                        body_text: str, body_html: Optional[str],

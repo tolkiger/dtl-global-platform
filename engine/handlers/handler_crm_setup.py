@@ -27,9 +27,8 @@ if engine_root not in sys.path:
 if shared_path not in sys.path:
     sys.path.insert(0, shared_path)
 
-# Now import with direct module names
+# Import config only - clients will be imported in handler
 from config import config
-from hubspot_client import hubspot_client
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -45,14 +44,23 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print(f"CRM setup started - Request ID: {context.aws_request_id}")
     
     try:
-        # Parse request body
-        if not event.get('body'):
-            return _create_error_response(400, "Request body is required")
+        # Import HubSpot client inside handler to avoid initialization issues during testing
+        from hubspot_client import hubspot_client
         
-        request_data = json.loads(event['body'])
+        # Handle both API Gateway format (with body) and direct format (for testing)
+        if event.get('body'):
+            # API Gateway format
+            request_data = json.loads(event['body'])
+        else:
+            # Direct format (for testing)
+            request_data = event
         
         # Extract client information
-        client_info = request_data['client_info']
+        client_info = request_data.get('client_info', {})
+        
+        # Validate required parameters
+        if not client_info.get('email'):
+            return _create_error_response(400, "Missing required parameter: email in client_info")
         
         # Create/update HubSpot contact
         contact_data = {
@@ -63,7 +71,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'phone': client_info.get('phone', ''),
             'industry': client_info.get('industry', ''),
             'lifecyclestage': 'customer',
-            'lead_source': 'dtl_global_onboarding'
         }
         
         # Check if contact exists

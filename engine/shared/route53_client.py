@@ -96,7 +96,7 @@ class Route53Client:
                 return self.get_hosted_zone_by_name(domain_name)
             else:
                 error_msg = f"Failed to create hosted zone for {domain_name}: {e}"
-                raise ClientError(error_msg) from e
+                raise Exception(error_msg) from e
     
     def get_hosted_zone_by_name(self, domain_name: str) -> Optional[Dict[str, Any]]:
         """Get hosted zone information by domain name.
@@ -145,7 +145,7 @@ class Route53Client:
         except ClientError as e:
             # Handle Route 53 API errors
             error_msg = f"Failed to get hosted zone for {domain_name}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def create_record(self, zone_id: str, record_name: str, record_type: str,
                      record_values: Union[str, List[str]], ttl: int = 300,
@@ -214,7 +214,7 @@ class Route53Client:
         except ClientError as e:
             # Handle Route 53 API errors
             error_msg = f"Failed to create {record_type} record {record_name}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def create_cloudfront_alias(self, zone_id: str, domain_name: str,
                               cloudfront_domain: str, 
@@ -319,7 +319,7 @@ class Route53Client:
         except ClientError as e:
             # Handle ACM/Route 53 API errors
             error_msg = f"Failed to create SSL certificate for {domain_name}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def create_mx_records(self, zone_id: str, domain_name: str,
                          mail_servers: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -402,7 +402,7 @@ class Route53Client:
         except ClientError as e:
             # Handle Route 53 API errors
             error_msg = f"Failed to get change status for {change_id}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
     
     def wait_for_change(self, change_id: str, max_wait_seconds: int = 300) -> bool:
         """Wait for a DNS change to propagate.
@@ -482,7 +482,7 @@ class Route53Client:
         except ClientError as e:
             # Handle Route 53 API errors
             error_msg = f"Failed to list records for zone {zone_id}: {e}"
-            raise ClientError(error_msg) from e
+            raise Exception(error_msg) from e
 
 
 # Global Route 53 client instance
