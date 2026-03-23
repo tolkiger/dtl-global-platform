@@ -1,0 +1,72 @@
+---
+description: DTL-Global customer onboarding process and Stripe production setup requirements
+alwaysApply: true
+---
+
+## Customer Onboarding Process Reference
+
+**MANDATORY**: When any user asks about customer onboarding, new customer setup, going to production, or Stripe live mode, ALWAYS reference the customer-onboarding skill first.
+
+### Critical Production Setup Rule
+
+**BEFORE ANY REAL CUSTOMER WORK:**
+1. Stripe MUST be switched from SANDBOX to PRODUCTION mode
+2. Follow the exact process in `.cursor/skills/customer-onboarding/SKILL.md`
+3. Update SSM parameters with live Stripe keys
+4. Verify production mode is working before customer implementation
+
+### Customer Onboarding Workflow
+
+The complete customer onboarding process is documented in:
+**`.cursor/skills/customer-onboarding/SKILL.md`**
+
+This skill contains:
+- Pre-customer system readiness checklist
+- 6-phase customer onboarding workflow
+- Stripe production setup (CRITICAL)
+- Quality assurance gates
+- Emergency procedures
+- Success metrics and KPIs
+
+### Process Entry Points
+
+**When user asks about:**
+- "New customer setup" → Reference customer-onboarding skill
+- "Stripe live mode" → Reference Stripe production setup section
+- "Customer onboarding" → Reference complete workflow
+- "Going to production" → Reference production setup checklist
+- "Real customer process" → Reference entire skill
+
+### Customer Type Keywords
+
+**Immediately identify customer type when user mentions:**
+- "friends and family", "free website", "family discount" → Friends & Family ($0/$20)
+- "free website discounted maintenance", "charity discount" → Free Website + Discounted ($0/$29)
+- "discounted maintenance", "existing customer", "referral" → Discounted Maintenance ($49)
+- "website maintenance", "maintenance only" → Website + Maintenance ($99)
+- "website crm maintenance", "maintenance plus crm" → Website + CRM + Maintenance ($149)
+- "starter", "basic website", "website only" → Starter ($500/$49)
+- "crm payments only", "no website" → CRM + Payments Only ($750/$99)
+- "website crm no payments", "no stripe" → Website + CRM ($875/$99)
+- "growth", "full package" → Growth ($1250/$149)
+- "professional", "ai chatbot" → Professional ($2500/$249)
+- "premium", "custom automations" → Premium ($4000+/$399+)
+
+### Key Process Gates
+
+1. **Pre-Customer**: System readiness verification
+2. **Consultation**: Discovery, demo, package recommendation
+3. **Contract**: Proposal, contract, 50% deposit
+4. **Production Setup**: Stripe live mode (CRITICAL)
+5. **Implementation**: Technical development and testing
+6. **Launch**: Go-live, training, final payment
+
+### Emergency Contacts & Escalation
+
+Follow the emergency procedures outlined in the customer-onboarding skill for:
+- System outages
+- Customer escalations
+- Payment processing issues
+- Technical failures
+
+**Remember**: Customer success depends on following this process exactly. Never deviate from the documented workflow without explicit approval.

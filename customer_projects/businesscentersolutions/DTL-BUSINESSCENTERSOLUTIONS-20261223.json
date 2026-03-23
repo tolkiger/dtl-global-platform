@@ -1,0 +1,133 @@
+{
+  "customer_info": {
+    "company": "Business Center Solutions",
+    "domain": "businesscentersolutions.net",
+    "industry": "consulting",
+    "email": "aduarte@businesscentersolutions.net",
+    "phone": "(816) 204-7169",
+    "contact_name": "Alondra Duarte",
+    "package_info": {
+      "package": "FREE_WEBSITE_DISCOUNTED",
+      "client_type": "free_website_discounted",
+      "setup_fee": 0,
+      "monthly_fee": 20,
+      "services": [
+        "dns",
+        "website",
+        "basic_support"
+      ],
+      "description": "Free website setup with discounted maintenance"
+    },
+    "tech_requirements": {
+      "manage_dns": false,
+      "dns_provider": "GoDaddy",
+      "existing_website": false,
+      "website_source": "Rocket.new ready for GitHub deployment",
+      "timeline": "rush",
+      "special_notes": "Website ready in Rocket.new, needs GitHub push and AWS routing via www subdomain"
+    }
+  },
+  "package_info": {
+    "package": "FREE_WEBSITE_DISCOUNTED",
+    "client_type": "free_website_discounted",
+    "setup_fee": 0,
+    "monthly_fee": 20,
+    "services": [
+      "dns",
+      "website",
+      "basic_support"
+    ],
+    "description": "Free website setup with discounted maintenance"
+  },
+  "tech_requirements": {
+    "manage_dns": false,
+    "dns_provider": "GoDaddy",
+    "existing_website": false,
+    "website_source": "Rocket.new ready for GitHub deployment",
+    "timeline": "rush",
+    "special_notes": "Website ready in Rocket.new, needs GitHub push and AWS routing via www subdomain"
+  },
+  "project_metadata": {
+    "created_date": "2026-12-23T00:00:00Z",
+    "project_id": "DTL-BUSINESSCENTERSOLUTIONS-20261223",
+    "estimated_timeline": "rush",
+    "total_setup_fee": 0,
+    "monthly_fee": 20,
+    "rush_delivery": true,
+    "deployment_method": "github_to_s3_cloudfront",
+    "last_updated": "2026-03-23T01:03:24.742151",
+    "status": "completed"
+  },
+  "onboarding_results": {
+    "customer_info": {
+      "company": "Business Center Solutions",
+      "domain": "businesscentersolutions.net",
+      "industry": "consulting",
+      "email": "aduarte@businesscentersolutions.net",
+      "phone": "(816) 204-7169",
+      "contact_name": "Alondra Duarte",
+      "package_info": {
+        "package": "FREE_WEBSITE_DISCOUNTED",
+        "client_type": "free_website_discounted",
+        "setup_fee": 0,
+        "monthly_fee": 20,
+        "services": [
+          "dns",
+          "website",
+          "basic_support"
+        ],
+        "description": "Free website setup with discounted maintenance"
+      },
+      "tech_requirements": {
+        "manage_dns": false,
+        "dns_provider": "GoDaddy",
+        "existing_website": false,
+        "website_source": "Rocket.new ready for GitHub deployment",
+        "timeline": "rush",
+        "special_notes": "Website ready in Rocket.new, needs GitHub push and AWS routing via www subdomain"
+      }
+    },
+    "project_id": "DTL-BUSINESSCENTERSOLUTI-20260323",
+    "onboarding_steps": {
+      "project_setup": {
+        "success": true,
+        "company_directory": "/Users/tolkiger/Development/dtl-global/dtl-global-platform/customer_projects/business_center_solutions",
+        "project_file": "/Users/tolkiger/Development/dtl-global/dtl-global-platform/customer_projects/business_center_solutions/DTL-BUSINESSCENTERSOLUTI-20260323.json",
+        "message": "Project structure created successfully"
+      },
+      "hubspot_crm": {
+        "success": false,
+        "error": "HubSpot setup failed: HTTPSConnectionPool(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /prod/crm-setup (Caused by NameResolutionError(\"HTTPSConnection(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Failed to resolve 'your-api-gateway.execute-api.us-east-1.amazonaws.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+      },
+      "website_deployment": {
+        "success": false,
+        "error": "Website deployment failed: HTTPSConnectionPool(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /prod/deploy (Caused by NameResolutionError(\"HTTPSConnection(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Failed to resolve 'your-api-gateway.execute-api.us-east-1.amazonaws.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+      },
+      "dns_ssl_setup": {
+        "success": false,
+        "error": "DNS/SSL setup failed: HTTPSConnectionPool(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /prod/dns (Caused by NameResolutionError(\"HTTPSConnection(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Failed to resolve 'your-api-gateway.execute-api.us-east-1.amazonaws.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+      },
+      "billing_setup": {
+        "success": false,
+        "error": "Billing setup failed: HTTPSConnectionPool(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /prod/subscribe (Caused by NameResolutionError(\"HTTPSConnection(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Failed to resolve 'your-api-gateway.execute-api.us-east-1.amazonaws.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+      },
+      "documentation": {
+        "success": true,
+        "files_created": [
+          "/Users/tolkiger/Development/dtl-global/dtl-global-platform/customer_projects/business_center_solutions/DNS_Instructions.md",
+          "/Users/tolkiger/Development/dtl-global/dtl-global-platform/customer_projects/business_center_solutions/Customer_Training_Guide.md",
+          "/Users/tolkiger/Development/dtl-global/dtl-global-platform/customer_projects/business_center_solutions/Project_Summary.md"
+        ],
+        "message": "Customer documentation generated successfully"
+      },
+      "notifications": {
+        "success": false,
+        "error": "Notification sending failed: HTTPSConnectionPool(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /prod/notify (Caused by NameResolutionError(\"HTTPSConnection(host='your-api-gateway.execute-api.us-east-1.amazonaws.com', port=443): Failed to resolve 'your-api-gateway.execute-api.us-east-1.amazonaws.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+      }
+    },
+    "files_created": [],
+    "next_steps": [],
+    "success": true,
+    "errors": []
+  }
+}
