@@ -96,6 +96,7 @@ class ApiStack(Stack):
                 allow_headers=["Content-Type", "Authorization"],  # Typical headers for JSON + auth
             ),  # End CORS options
         )  # End RestApi definition
+        
         for route_path, module_suffix in _HANDLER_ROUTE_SPECS:  # Create one Lambda + route per handler
             handler_id = f"handler_{module_suffix}"  # Python module name without .py
             function_name = f"dtl-onboarding-{module_suffix.replace('_', '-')}"  # AWS Lambda function name

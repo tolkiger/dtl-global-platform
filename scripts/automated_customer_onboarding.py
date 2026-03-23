@@ -26,7 +26,7 @@ class AutomatedOnboardingProcessor:
         Args:
             api_base_url: Base URL for DTL-Global API Gateway
         """
-        self.api_base_url = api_base_url or "https://your-api-gateway.execute-api.us-east-1.amazonaws.com/prod"
+        self.api_base_url = api_base_url or "https://vxdtzyxui5.execute-api.us-east-1.amazonaws.com/prod"
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
     def process_customer_onboarding(self, customer_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -189,33 +189,47 @@ class AutomatedOnboardingProcessor:
             company_name = customer_data['company'].lower().replace(' ', '-').replace('.', '')
             expected_repo_name = f"{company_name}-website"
             
-            # Try to find the repository using GitHub CLI
-            # This searches for recently created repos with the company name
+            # Check if GitHub repo URL was provided in customer data
+            github_repo = customer_data.get('tech_requirements', {}).get('github_repo')
+            if github_repo:
+                repo_name = github_repo.split('/')[-1]  # Extract repo name from URL
+                return {
+                    'success': True,
+                    'repository_name': repo_name,
+                    'repository_url': github_repo,
+                    'message': f'Using provided GitHub repository: {repo_name}',
+                    'source': 'customer_provided'
+                }
+            
+            # Try to find the repository using GitHub CLI (fallback)
             try:
                 import subprocess
                 result = subprocess.run([
-                    'gh', 'repo', 'list', '--limit', '20', '--json', 'name,createdAt'
-                ], capture_output=True, text=True, timeout=10)
+                    'gh', 'repo', 'list', '--limit', '10', '--json', 'name,createdAt'
+                ], capture_output=True, text=True, timeout=5)
                 
                 if result.returncode == 0:
                     import json
                     repos = json.loads(result.stdout)
                     
-                    # Look for repos containing the company name
-                    matching_repos = [
+                    # Look for recently created repos (last 24 hours)
+                    from datetime import datetime, timedelta
+                    recent_cutoff = datetime.now() - timedelta(days=1)
+                    
+                    recent_repos = [
                         repo for repo in repos 
-                        if company_name in repo['name'].lower()
+                        if datetime.fromisoformat(repo['createdAt'].replace('Z', '+00:00')) > recent_cutoff
                     ]
                     
-                    if matching_repos:
-                        # Use the most recently created matching repo
-                        latest_repo = sorted(matching_repos, key=lambda x: x['createdAt'], reverse=True)[0]
+                    if recent_repos:
+                        # Use the most recently created repo
+                        latest_repo = sorted(recent_repos, key=lambda x: x['createdAt'], reverse=True)[0]
                         return {
                             'success': True,
                             'repository_name': latest_repo['name'],
-                            'repository_url': f"https://github.com/{latest_repo['name']}",
-                            'message': f'Found GitHub repository: {latest_repo["name"]}',
-                            'source': 'rocket_new_export'
+                            'repository_url': f"https://github.com/tolkiger/{latest_repo['name']}",
+                            'message': f'Found recent GitHub repository: {latest_repo["name"]}',
+                            'source': 'auto_detected'
                         }
             except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
                 pass  # Fall through to manual instructions

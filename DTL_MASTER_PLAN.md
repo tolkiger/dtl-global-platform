@@ -668,19 +668,20 @@ The platform now supports 11 customer types with automatic keyword recognition:
 - `customer_projects/{company_name}/Project_Summary.md` - Project overview
 - `customer_projects/{company_name}/Customer_Training_Guide.md` - Training materials
 
-**Rocket.new Integration**:
+**Rocket.new Integration** (Updated Reality):
 - Websites developed in Rocket.new platform
 - GitHub repositories created automatically via Rocket.new export
-- Repository naming: `{company-name}-website` (Rocket.new handles this)
-- Our automation detects and integrates with exported repositories
+- Repository naming: **Shortened/modified by Rocket.new** (e.g., `businesscenter` not `businesscentersolutions-website`)
+- Our automation accepts actual GitHub repo URLs provided by customer/developer
+- Deployment adapts to real repository names, not predicted ones
 - Automated Stripe live mode switch
 - Security checks and verification
 - Backup and rollback capabilities
 
 **Customer Onboarding Scripts**: 
+- `scripts/efficient_onboarding.py` ⭐ (recommended: ultra-fast, token-efficient)
 - `scripts/start_customer_onboarding.py` (interactive data collection)
-- `scripts/automated_customer_onboarding.py` (full API automation with Rocket.new integration)
-- `scripts/onboard_customer.py` (quick wrapper)
+- `scripts/automated_customer_onboarding.py` (full API automation - production only)
 - `scripts/switch_to_production.py` (Stripe live mode setup)
 - Interactive customer information collection
 - Project setup and documentation

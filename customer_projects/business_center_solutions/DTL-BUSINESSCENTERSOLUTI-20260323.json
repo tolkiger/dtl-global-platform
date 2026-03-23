@@ -1,0 +1,35 @@
+{
+  "customer_info": {
+    "company": "Business Center Solutions",
+    "domain": "businesscentersolutions.net",
+    "industry": "consulting",
+    "email": "aduarte@businesscentersolutions.net",
+    "phone": "(816) 204-7169",
+    "contact_name": "Alondra Duarte",
+    "package_info": {
+      "package": "FREE_WEBSITE_DISCOUNTED",
+      "client_type": "free_website_discounted",
+      "setup_fee": 0,
+      "monthly_fee": 20,
+      "services": [
+        "dns",
+        "website",
+        "basic_support"
+      ],
+      "description": "Free website setup with discounted maintenance"
+    },
+    "tech_requirements": {
+      "manage_dns": false,
+      "dns_provider": "GoDaddy",
+      "existing_website": false,
+      "website_source": "Rocket.new ready for GitHub deployment",
+      "timeline": "rush",
+      "special_notes": "Website ready in Rocket.new, needs GitHub push and AWS routing via www subdomain"
+    }
+  },
+  "project_metadata": {
+    "project_id": "DTL-BUSINESSCENTERSOLUTI-20260323",
+    "created_date": "2026-03-23T01:19:50.647660",
+    "status": "in_progress"
+  }
+}

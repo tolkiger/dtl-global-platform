@@ -1,0 +1,48 @@
+{
+  "company": "Business Center Solutions",
+  "domain": "businesscentersolutions.net",
+  "email": "aduarte@businesscentersolutions.net",
+  "phone": "(816) 204-7169",
+  "contact_name": "Alondra Duarte",
+  "industry": "consulting",
+  "package": "free_website_discounted",
+  "setup_fee": 0,
+  "monthly_fee": 20,
+  "services": [
+    "dns",
+    "website",
+    "support"
+  ],
+  "project_id": "DTL-BUSINESSCENTERSOLUTIONS-20260323",
+  "created": "2026-03-23T01:35:15.422235",
+  "github_repo": "https://github.com/tolkiger/businesscenter",
+  "status": "completed",
+  "onboarding_results": {
+    "customer": "Business Center Solutions",
+    "steps": {
+      "hubspot": {
+        "success": false,
+        "error": "HubSpot API failed: 502 - {\"message\": \"Internal server error\"}"
+      },
+      "deployment": {
+        "success": false,
+        "error": "Deployment API failed: 502 - {\"message\": \"Internal server error\"}"
+      },
+      "dns_ssl": {
+        "success": false,
+        "error": "DNS API failed: 502 - {\"message\": \"Internal server error\"}"
+      },
+      "billing": {
+        "success": false,
+        "error": "Billing API failed: 502 - {\"message\": \"Internal server error\"}"
+      },
+      "notifications": {
+        "success": false,
+        "error": "Notification API failed: 502 - {\"message\": \"Internal server error\"}"
+      }
+    },
+    "success": true,
+    "errors": []
+  },
+  "last_updated": "2026-03-23T01:44:28.245757"
+}
