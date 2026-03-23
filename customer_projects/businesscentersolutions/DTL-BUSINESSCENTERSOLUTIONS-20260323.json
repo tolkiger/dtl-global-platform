@@ -22,7 +22,7 @@
     "steps": {
       "hubspot": {
         "success": false,
-        "error": "HubSpot API failed: 502 - {\"message\": \"Internal server error\"}"
+        "error": "HubSpot API failed: 500 - {\"error\": \"Internal server error: module 'hubspot_client' has no attribute 'get_contact_by_email'\", \"timestamp\": \"2026-03-23T07:08:15.262967\"}"
       },
       "deployment": {
         "success": false,
@@ -30,7 +30,7 @@
       },
       "dns_ssl": {
         "success": false,
-        "error": "DNS API failed: 502 - {\"message\": \"Internal server error\"}"
+        "error": "DNS API failed: 500 - {\"error\": \"module 'route53_client' has no attribute 'create_hosted_zone'\", \"timestamp\": \"2026-03-23T07:08:16.473172\"}"
       },
       "billing": {
         "success": false,
@@ -38,11 +38,11 @@
       },
       "notifications": {
         "success": false,
-        "error": "Notification API failed: 502 - {\"message\": \"Internal server error\"}"
+        "error": "Notification API failed: 500 - {\"error\": \"module 'ses_client' has no attribute 'send_email'\", \"timestamp\": \"2026-03-23T07:08:18.556805\"}"
       }
     },
     "success": true,
     "errors": []
   },
-  "last_updated": "2026-03-23T01:44:28.245757"
+  "last_updated": "2026-03-23T02:08:18.566354"
 }

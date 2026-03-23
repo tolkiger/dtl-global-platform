@@ -21,7 +21,7 @@ from hubspot.crm.companies import SimplePublicObjectInput as CompanyInput
 from hubspot.crm.deals import SimplePublicObjectInput as DealInput
 from hubspot.crm.pipelines import PipelineInput, PipelineStageInput
 
-from .config import config
+from config import config
 
 
 class HubSpotClient:

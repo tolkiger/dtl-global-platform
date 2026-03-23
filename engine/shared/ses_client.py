@@ -20,7 +20,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from botocore.exceptions import ClientError
 
-from .config import config, SES_CONFIG
+from config import config, SES_CONFIG
 
 
 class SESClient:
