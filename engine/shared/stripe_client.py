@@ -7,7 +7,7 @@ This module provides a comprehensive Stripe API client for managing:
 - Stripe Connect for client payment accounts
 - Payment processing and webhooks
 
-IMPORTANT: All operations run in SANDBOX mode (sk_test_) until production switch.
+IMPORTANT: Stripe secret can be either SANDBOX (sk_test_) or LIVE (sk_live_) depending on the SSM configuration.
 See docs/AUTHENTICATION.md for switching to live keys.
 
 Author: DTL-Global Platform
@@ -32,15 +32,15 @@ class StripeClient:
         """Initialize Stripe client with authentication and configuration.
         
         Loads Stripe secret key from SSM Parameter Store and validates
-        that it's a sandbox key (sk_test_) for safety.
+        that it is a supported Stripe secret (sk_test_ or sk_live_).
         """
         # Get Stripe secret key from SSM Parameter Store
         self._secret_key = config.get_secret("stripe_secret")
         
-        # Validate that we're using sandbox keys only
+        # Validate key format before attempting Stripe API calls.
         if not config.validate_stripe_key(self._secret_key):
             raise ValueError(
-                "Stripe key must be sandbox (sk_test_) until production switch. "
+                "Stripe key must be a valid secret in SSM: expected sk_test_ or sk_live_. "
                 "See docs/AUTHENTICATION.md for switching procedure."
             )
         
@@ -238,7 +238,7 @@ class StripeClient:
             Dictionary mapping product names to product/price data
         """
         # DTL-Global service products (from master plan Section 6.4)
-        return {
+        dtl_products: Dict[str, Dict[str, Any]] = {
             # One-time setup products
             'dtl_starter_setup': {
                 'name': 'DTL Starter Setup',
@@ -311,6 +311,60 @@ class StripeClient:
                 'interval': 'month'
             }
         }
+
+        # Best-effort enrichment: attach the real Stripe Price IDs for each product.
+        # This is required for subscription creation (Stripe rejects unknown price IDs).
+        for service_package, package_info in dtl_products.items():
+            try:
+                # Reuse cached price lookup results when available.
+                if service_package in self._prices_cache:
+                    package_info['price_id'] = self._prices_cache[service_package]  # Cache hit
+                    continue  # Skip network calls
+
+                # Load the Stripe product matching the configured display name.
+                # Product names are the stable identifiers used during phase0 setup.
+                product = None  # Default to not found
+                products = stripe.Product.list(active=True, limit=100)  # List active products
+                for p in products.auto_paging_iter():
+                    if p.name == package_info['name']:
+                        product = p  # Found matching product
+                        break  # Stop once we find an exact name match
+
+                if product is None:
+                    # Keep going; handler will fall back to placeholder IDs if needed.
+                    package_info['price_id'] = None  # Explicitly indicate missing price id
+                    continue  # No product -> no price id
+
+                # Find an active price matching amount and recurring interval.
+                price_id = None  # Default to not found
+                prices = stripe.Price.list(product=product.id, active=True, limit=100)  # List active prices
+                expected_amount = package_info.get('amount')  # Amount in cents
+                expected_interval = package_info.get('interval')  # Recurring interval for monthly prices
+
+                for price in prices.auto_paging_iter():
+                    if price.unit_amount != expected_amount:
+                        continue  # Amount mismatch
+
+                    if package_info.get('type') == 'recurring':
+                        if not price.recurring:  # Must be recurring
+                            continue  # Not a recurring price
+                        if price.recurring.get('interval') != expected_interval:
+                            continue  # Interval mismatch
+                    else:
+                        if price.recurring is not None:
+                            continue  # One-time prices must not have recurring data
+
+                    price_id = price.id  # Found matching Stripe price
+                    break  # Stop at first match
+
+                package_info['price_id'] = price_id  # Attach to package_info
+                self._prices_cache[service_package] = price_id  # Cache for later calls
+            except stripe.error.StripeError as e:
+                # If Stripe lookups fail, keep the handler functional by leaving price_id unset.
+                print(f"⚠️ Stripe price lookup failed for {service_package}: {e}")  # Debug print
+                package_info['price_id'] = None  # Avoid crashing subscription flow
+
+        return dtl_products  # Return enriched catalog
     
     def create_connect_account(self, business_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a Stripe Connect account for a client.
