@@ -731,7 +731,7 @@ The platform now supports 11 customer types with automatic keyword recognition:
 ## 22. Phase Gate Checklist
 
 BOOTSTRAP — DONE
-[x] All directories, rules (12), skills (4), docs/AUTHENTICATION.md, .gitignore, .env.example, README, __init__.py files created
+[x] All directories, rules (13), skills (4), docs/AUTHENTICATION.md, .gitignore, .env.example, README, __init__.py files created
 [x] MCP servers set up (Cursor native for Stripe, hubspotcli for HubSpot)
 
 PHASE 0 — HubSpot and Stripe
@@ -882,7 +882,7 @@ Naming convention matches the repository name: dtl-global-platform.
 3. Check phase status (Section 21)
 4. BEFORE starting a phase: create GitHub Issue + feature branch (Rule 012)
 5. Build ONLY current phase
-6. Follow ALL 12 rules
+6. Follow ALL 13 rules
 7. Make granular commits referencing the issue
 8. Run gate checklist before completing
 9. Push, create PR (--body), merge (--squash --yes)
