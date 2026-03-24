@@ -38,6 +38,8 @@ python3 -m pip install -r requirements.txt   # dev/test (includes pytest, boto3,
 
 If `cdk/lambda_layer/python/` is missing or empty, **`cdk synth` / `cdk deploy` fails** with an error that tells you to run the `pip install` command above (there is no Docker or container bundling in CDK).
 
+**Cursor:** This workflow is enforced for the AI via **`.cursor/rules/dtl-cdk-lambda-local-workflow.mdc`** (always on) and the skill **`.cursor/skills/dtl-cdk-local-workflow/SKILL.md`**.
+
 **Flow:** Client → **API Gateway** → **Lambda** (`/var/task` = `engine/` code; `/opt/python` = layer) → **`shared/` clients** → HubSpot, Stripe, AWS APIs, Anthropic, etc.
 
 ---

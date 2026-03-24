@@ -1,0 +1,33 @@
+---
+description: Mandatory local CDK workflow for Lambda layer + never delete engine/ application code
+alwaysApply: true
+---
+
+## CDK and Lambda layer — local workflow (mandatory)
+
+Before running **`cdk synth`**, **`cdk deploy`**, or any CDK command that builds **`DtlApi`** / the Python dependency layer, run **once** (or after changing `cdk/lambda_layer/requirements.txt`):
+
+```bash
+python3 -m pip install --no-cache-dir -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python
+```
+
+This matches **`buildspec.yml`** (CodeBuild runs the same step before `cdk deploy`). The directory **`cdk/lambda_layer/python/`** is listed in **`.gitignore`** — do not commit wheels.
+
+If that folder is missing or empty, **`api_stack.py`** fails with **`RuntimeError`** (no Docker bundling fallback).
+
+---
+
+## The `engine/` directory — required — do not remove
+
+**Never delete `engine/` or remove it from git.** It is **not** redundant after the Lambda layer.
+
+| Location | Purpose |
+|----------|---------|
+| **`engine/handlers/`** | Lambda entry modules (`lambda_handler` per API Gateway route). |
+| **`engine/shared/`** | Application code: `config`, HubSpot/Stripe/SES/S3 clients, etc. |
+| **`engine/templates/`** | Industry JSON templates. |
+| **`cdk/lambda_layer/python/`** (gitignored) | Third-party **pip** packages only (HubSpot SDK, Stripe, Anthropic, requests). |
+
+CDK zips **`engine/`** as the **function** deployment package and attaches the **layer** for imports like `import stripe`. Without **`engine/`**, there is no onboarding API code.
+
+When helping with deployment or CDK, **remind the user to run the `pip install … -t cdk/lambda_layer/python` command** if they hit layer errors, and **never suggest deleting `engine/`**.
