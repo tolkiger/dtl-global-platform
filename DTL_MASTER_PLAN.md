@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.6.0
+# DTL-Global Platform — Master Build Plan v2.7.0
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-22 (v2.6.0 — MAJOR: Removed domain requirements entirely, simplified to 4 stacks, follows Rule 003 No Over-Engineering)
+> **Updated:** 2026-03-24 (v2.7.0 — Plan aligned with repository: `engine/` Lambda bundle, 16 API routes, four CDK stacks, Stripe live-catalog opt-in)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.7.0 | **Documentation sync**: Section 2 structure matches repo (four stacks in `cdk/stacks/`, 16 Lambda handlers, seven `shared/` modules). Documented **`engine/`** as the Lambda deployment asset root (handlers + shared + templates + vendored deps from `engine/requirements.txt`). Phase 1 gate text corrected (no separate DNS/SSL/Email stacks). Stripe Phase 0: `phase0_stripe_setup.py` supports optional **`DTL_STRIPE_ALLOW_LIVE=1`** for idempotent **live** catalog seeding (default remains sandbox-only). Appendix B clarifies deployment packaging vs. “layer” wording. |
 | v2.6.0 | **MAJOR simplification**: Removed domain requirements entirely per Rule 003 (No Over-Engineering); deleted DNS, SSL, Email stacks; reduced from 7 to 4 stacks (Storage, CDN, API, Pipeline); uses default AWS URLs and simple SES email verification; eliminates unnecessary complexity for Phase 1 |
 | v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
 | v2.5.2 | **Cost optimization**: CodePipeline uses S3-managed encryption (saves ~$1/month KMS costs); Lambda functions have 30-day CloudWatch log retention; Assets S3 bucket has lifecycle rules (IA after 30 days, Glacier after 90 days, expire after 7 years); estimated monthly savings: $1.60-11.50 |
@@ -50,7 +51,7 @@
 
 0. [Project Bootstrap](#0-project-bootstrap-cursor-creates-everything)
 1. [Cursor Rules and Coding Standards](#1-cursor-rules--coding-standards)
-2. [Project Structure](#2-project-structure)
+2. [Project Structure](#2-project-structure) (includes [2.1 The `engine/` directory](#21-the-engine-directory-lambda-source-bundle))
 3. [Approved AWS Services](#3-approved-aws-services)
 4. [Approved External APIs](#4-approved-external-apis)
 5. [MCP vs Python SDK Decision](#5-mcp-vs-python-sdk-decision)
@@ -105,10 +106,12 @@ NOTE: MCP servers are NOT configured via .cursor/mcp.json in this project.
     +-- .cursor/rules/ and skills/
     +-- docs/
     +-- scripts/
-    +-- cdk/stacks/
+    +-- cdk/stacks/          (four stacks: storage, cdn, api, pipeline)
     +-- engine/shared/, handlers/, templates/
     +-- tests/
+    +-- customer_projects/
     +-- client-sites/
+    +-- hubspot/dtl-global-platform-app/
 
 ### 0.3 - 0.10
 
@@ -154,19 +157,34 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
     +-- README.md
     +-- .gitignore
     +-- .env.example
-    +-- .cursor/rules/dtl-global.mdc and skills/ (4 files)
+    +-- .cursor/rules/dtl-global.mdc and skills/
     +-- docs/AUTHENTICATION.md
-    +-- scripts/
-    |   +-- phase0_hubspot_setup.py
-    |   +-- phase0_hubspot_verify.py
-    |   +-- phase0_stripe_setup.py        (SANDBOX mode)
-    |   +-- phase0_stripe_verify.py
-    |   +-- setup_ssm_parameters.py       (Phase 0.5)
-    |   +-- verify_ssm_parameters.py
-    |   +-- seed_templates.py
-    +-- cdk/app.py, cdk.json, requirements.txt, stacks/ (7 stacks)
-    +-- engine/shared/ (7 modules), handlers/ (12 handlers), templates/
+    +-- scripts/                    # Phase 0 setup, SSM, onboarding helpers, integration tests
+    +-- cdk/
+    |   +-- app.py, cdk.json, requirements.txt
+    |   +-- stacks/                 # Four stacks: storage_stack, cdn_stack, api_stack, pipeline_stack
+    +-- engine/                     # Lambda deployment package root (see §2.1)
+    |   +-- handlers/               # 16 handler_*.py modules (one per API route)
+    |   +-- shared/                 # Seven client modules (+ __init__.py): config, hubspot_client, stripe_client, ai_client, ses_client, route53_client, s3_client
+    |   +-- templates/              # Industry JSON templates
+    |   +-- requirements.txt        # Declared third-party deps; vendor trees under engine/ may be present for Code.from_asset packaging
     +-- tests/
+    +-- customer_projects/          # Per-customer project metadata (optional)
+    +-- client-sites/               # Placeholder for local client site experiments (.gitkeep)
+    +-- hubspot/dtl-global-platform-app/   # HubSpot developer platform app assets (per AUTHENTICATION.md)
+
+### 2.1 The `engine/` directory (Lambda source bundle)
+
+**Purpose:** `engine/` is the **single directory tree zipped by CDK** (`lambda_.Code.from_asset` → `engine/`) and executed by every onboarding Lambda. It is **not** a separate repository; it is the **application code** for serverless onboarding.
+
+| Part | Role |
+|------|------|
+| `handlers/` | One Python module per API Gateway route (e.g. `handler_crm_setup.py` → `/crm-setup`). Each exports `lambda_handler`. |
+| `shared/` | Config (SSM), HubSpot, Stripe, Anthropic, SES, Route 53, S3 clients — imported by handlers. |
+| `templates/` | Industry template JSON for AI / onboarding content. |
+| Third-party packages | Installed **under** `engine/` (vendor layout) so the deployment artifact includes `hubspot`, `stripe`, `anthropic`, etc., matching `engine/requirements.txt`. The pipeline does not use a separate Lambda **Layer** construct today; the bundle is self-contained. |
+
+Local development: configure AWS credentials and SSM, or use `.env` only for scripts (never commit `.env`).
 
 ---
 
@@ -214,16 +232,15 @@ The platform is designed for maximum cost efficiency while maintaining functiona
 | API | Purpose | Auth | Mode |
 |-----|---------|------|------|
 | HubSpot CRM API | CRM management | Private App Token | Production |
-| Stripe API | Payments, invoicing | Secret Key | SANDBOX until launch |
-| Stripe Connect | Client payment accounts | OAuth + Platform | SANDBOX until launch |
+| Stripe API | Payments, invoicing | Secret Key | **Test or live** per SSM `/dtl-global-platform/stripe/secret` (use `sk_test_` for development; `sk_live_` only after production checklist) |
+| Stripe Connect | Client payment accounts | OAuth + Platform | Matches Stripe account mode (test vs live) |
 | Anthropic Claude (Direct) | AI features | API Key | Production |
 | Google Workspace Admin | Email (future) | OAuth 2.0 | Future |
 | GitHub API | CI/CD triggers | Existing CodeStar | Production |
 
-Stripe Sandbox Strategy:
-- ALL development and testing uses sk_test_ keys
-- Switch to sk_live_ keys ONLY when first real client is ready to pay
-- See docs/AUTHENTICATION.md for switching procedure
+Stripe key strategy:
+- **Development / default:** `sk_test_` in SSM; `scripts/phase0_stripe_setup.py` refuses `sk_live_` unless **`DTL_STRIPE_ALLOW_LIVE=1`** (idempotent **live** product/price catalog only).
+- **Production:** `sk_live_` in SSM when the business is ready to charge real customers; see `docs/AUTHENTICATION.md` and the customer-onboarding skill.
 
 ---
 
@@ -295,9 +312,9 @@ Monthly Subscriptions:
 
 ### 7.1 HubSpot Setup — Status: DONE
 
-### 7.2 Stripe Setup — Status: CONFIRM (SANDBOX mode)
+### 7.2 Stripe Setup — Status: CONFIRM (sandbox default; live catalog optional)
 
-Creates 9 products. Scripts MUST refuse live keys (sk_live_).
+Creates **9** products/prices (same names/amounts as `stripe_client.get_dtl_products()`). **`phase0_stripe_setup.py`:** refuses `sk_live_` **unless** `DTL_STRIPE_ALLOW_LIVE=1` (use once to seed **live** Stripe with the same catalog). **`phase0_stripe_verify.py`:** still targets sandbox verification workflow.
 
 ### 7.3 Phase 0 Gate
 
@@ -384,7 +401,7 @@ Already exists. ARN in SSM: /dtl-global-platform/github/codestar_connection_arn
 |-------|-----------|
 | **Storage** | 3 DynamoDB tables (`dtl-industry-templates`, `dtl-clients`, `dtl-onboarding-state`) + **2** S3 buckets (`dtl-assets-{account}`, `dtl-csv-imports-{account}`) |
 | **CDN** | **Client websites** S3 bucket (`dtl-client-websites-{account}`) + **CloudFront** distribution using **S3 Origin Access Control (OAC)** — serves **client sites** via default CloudFront URL |
-| **API** | API Gateway REST (12 POST routes) + 12 Lambda functions (Python 3.12, 256MB, 5min) — uses default API Gateway URL |
+| **API** | API Gateway REST (**16** POST routes) + **16** Lambda functions (Python 3.12, 256MB, 5min) — uses default API Gateway URL |
 | **Pipeline** | CodePipeline **V2** + CodeBuild (`buildspec.yml`), source = GitHub via **existing** CodeStar connection |
 
 **Why the website bucket lives in the CDN stack:** CDK `S3BucketOrigin.with_origin_access_control(bucket)` ties bucket policy to the CloudFront distribution. Putting the bucket and distribution in **one** stack avoids a cyclic dependency between Storage and CDN stacks.
@@ -414,7 +431,7 @@ This repo’s **Route 53 hosted zone** and records (e.g. `www` → client-site C
 [ ] cdk deploy --all succeeds
 [ ] All DynamoDB tables exist
 [ ] All S3 buckets exist: `dtl-client-websites-{account}` (CDN stack), `dtl-assets-{account}`, `dtl-csv-imports-{account}` (Storage stack)
-[ ] API Gateway exists with 12 endpoints
+[ ] API Gateway exists with **16** POST endpoints (see `cdk/stacks/api_stack.py` → `_HANDLER_ROUTE_SPECS`)
 [ ] CodePipeline **V2** uses EXISTING CodeStar connection (SSM ARN)
 [ ] SES sender verified
 [ ] NO non-serverless resources
@@ -425,27 +442,31 @@ This repo’s **Route 53 hosted zone** and records (e.g. `www` → client-site C
 
 ## 10. Phase 2: Onboarding Engine Lambda Functions
 
-### 10.1 Build Order (19 steps)
+### 10.1 Build Order (shared modules first, then handlers — 23 steps)
 
 Step 1:  shared/config.py
 Step 2:  shared/hubspot_client.py
-Step 3:  shared/stripe_client.py       (SANDBOX keys)
+Step 3:  shared/stripe_client.py       (Stripe key from SSM)
 Step 4:  shared/ai_client.py           (Claude Haiku 4.5)
 Step 5:  shared/ses_client.py
 Step 6:  shared/route53_client.py
 Step 7:  shared/s3_client.py
 Step 8:  handler_bid.py
 Step 9:  handler_prompt.py             (SEO-optimized)
-Step 10: handler_invoice.py            (Stripe SANDBOX)
+Step 10: handler_invoice.py            (Stripe)
 Step 11: handler_crm_setup.py
-Step 12: handler_stripe_setup.py       (Stripe Connect SANDBOX)
+Step 12: handler_stripe_setup.py       (Stripe Connect)
 Step 13: handler_dns.py
 Step 14: handler_deploy.py
 Step 15: handler_email_setup.py
-Step 16: handler_subscribe.py          (Stripe SANDBOX)
+Step 16: handler_subscribe.py          (Stripe subscriptions)
 Step 17: handler_notify.py
 Step 18: handler_crm_import.py         (CSV import)
 Step 19: handler_onboard.py            (Orchestrator, client_type aware)
+Step 20: handler_chatbot.py
+Step 21: handler_workspace.py
+Step 22: handler_whatsapp.py
+Step 23: handler_collaboration.py
 
 ### 10.2 shared/config.py SSM References
 
@@ -469,7 +490,7 @@ Step 19: handler_onboard.py            (Orchestrator, client_type aware)
 [ ] All shared modules + handlers working
 [ ] All 4 client types handled
 [ ] CRM import handler works
-[ ] All Stripe calls use SANDBOX
+[ ] Stripe calls use secret from SSM (test or live per your environment; live only after production checklist)
 [ ] Tests pass, code documented
 [ ] PR merged to main
 
@@ -729,7 +750,7 @@ PROCEED TO PHASE 1
 PHASE 1 — CDK Infrastructure
 [ ] Issue + branch created
 [ ] cdk deploy --all succeeds
-[ ] Section 9.3 resources exist (Storage + CDN + DNS + SSL + Email + API + Pipeline); CodePipeline **V2** + CodeStar
+[ ] Section 9.3 resources exist (**Storage + CDN + API + Pipeline** four stacks); CodePipeline **V2** + CodeStar
 [ ] 100% serverless, PR merged
 PROCEED TO PHASE 2
 
@@ -772,15 +793,26 @@ PHASE 6 — E2E Testing
 
 **API Gateway Endpoint:** `https://vxdtzyxui5.execute-api.us-east-1.amazonaws.com/prod/`
 
-### ✅ Fully Functional Endpoints
+### ✅ API routes (all POST; see `_HANDLER_ROUTE_SPECS` in `cdk/stacks/api_stack.py`)
 
-| Endpoint | Status | Function |
-|----------|--------|----------|
-| `/crm-setup` | ✅ OPERATIONAL | Creates HubSpot contacts, deals, and CRM records |
-| `/deploy` | ✅ OPERATIONAL | Deploys client websites to S3 + CloudFront |
-| `/dns` | ✅ OPERATIONAL | Configures Route 53 DNS and SSL certificates |
-| `/subscribe` | ✅ OPERATIONAL | Sets up Stripe billing and subscriptions |
-| `/notify` | ✅ OPERATIONAL | Sends customer notifications via SES |
+| Endpoint | Primary function |
+|----------|------------------|
+| `/bid` | AI bid generation |
+| `/prompt` | SEO / website prompt generation |
+| `/invoice` | Stripe invoices |
+| `/crm-setup` | HubSpot contacts, companies, deals |
+| `/stripe-setup` | Stripe Connect onboarding |
+| `/dns` | Route 53 / DNS automation |
+| `/deploy` | GitHub → S3 / CloudFront deploy |
+| `/email-setup` | Client email setup helpers |
+| `/subscribe` | Stripe subscriptions |
+| `/notify` | SES notifications |
+| `/crm-import` | CRM CSV import |
+| `/onboard` | Orchestrated onboarding |
+| `/chatbot` | AI chatbot |
+| `/workspace` | Google Workspace email setup |
+| `/whatsapp` | WhatsApp Business |
+| `/collaboration` | Slack / Teams |
 
 ### 🎯 Production Onboarding Scripts
 
@@ -824,7 +856,8 @@ CDK (cdk/requirements.txt):
   aws-cdk-lib>=2.180.0
   constructs>=10.4.0
 
-Lambda Layer (engine/requirements.txt):
+Lambda runtime dependencies (declared in **engine/requirements.txt**; installed under **`engine/`** for the deployment zip — CDK does not define a separate Lambda **Layer** in `api_stack.py`):
+
   hubspot-api-client>=9.0.0
   stripe>=8.0.0
   anthropic>=0.40.0
@@ -859,4 +892,4 @@ Naming convention matches the repository name: dtl-global-platform.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.5.1*
+*End of DTL-Global Platform Master Build Plan v2.7.0*
