@@ -47,3 +47,9 @@ htmlcov/
 *.tmp
 *.temp
 scratch/
+
+# Local dependency experiments (Lambda packaging) - never commit
+engine/pydantic*/
+engine/pydantic_core*/
+engine/pydantic-*/
+engine/pydantic_core-*/
