@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.7.0
+# DTL-Global Platform — Master Build Plan v2.8.0
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-24 (v2.7.0 — Plan aligned with repository: `engine/` Lambda bundle, 16 API routes, four CDK stacks, Stripe live-catalog opt-in)
+> **Updated:** 2026-03-24 (v2.8.0 — Python dependencies in Lambda layer from `cdk/lambda_layer/`; slim `engine/` application-only bundle)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,6 +11,7 @@
 
 | Version | Changes |
 |---------|---------|
+| v2.8.0 | **Lambda layer for Python dependencies**: `cdk/lambda_layer/requirements.txt` + pre-built `python/` (CI/local) or Docker bundling; `engine/` slimmed to handlers, shared, templates only. CodeBuild runs `pip install -t` before `cdk deploy`. |
 | v2.7.0 | **Documentation sync**: Section 2 structure matches repo (four stacks in `cdk/stacks/`, 16 Lambda handlers, seven `shared/` modules). Documented **`engine/`** as the Lambda deployment asset root (handlers + shared + templates + vendored deps from `engine/requirements.txt`). Phase 1 gate text corrected (no separate DNS/SSL/Email stacks). Stripe Phase 0: `phase0_stripe_setup.py` supports optional **`DTL_STRIPE_ALLOW_LIVE=1`** for idempotent **live** catalog seeding (default remains sandbox-only). Appendix B clarifies deployment packaging vs. “layer” wording. |
 | v2.6.0 | **MAJOR simplification**: Removed domain requirements entirely per Rule 003 (No Over-Engineering); deleted DNS, SSL, Email stacks; reduced from 7 to 4 stacks (Storage, CDN, API, Pipeline); uses default AWS URLs and simple SES email verification; eliminates unnecessary complexity for Phase 1 |
 | v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
@@ -182,7 +183,7 @@ See Section 1 for rules, Section 0.4 for skills (phase-management, code-generati
 | `handlers/` | One Python module per API Gateway route (e.g. `handler_crm_setup.py` → `/crm-setup`). Each exports `lambda_handler`. |
 | `shared/` | Config (SSM), HubSpot, Stripe, Anthropic, SES, Route 53, S3 clients — imported by handlers. |
 | `templates/` | Industry template JSON for AI / onboarding content. |
-| Third-party packages | Installed **under** `engine/` (vendor layout) so the deployment artifact includes `hubspot`, `stripe`, `anthropic`, etc., matching `engine/requirements.txt`. The pipeline does not use a separate Lambda **Layer** construct today; the bundle is self-contained. |
+| Third-party packages | Declared in **`cdk/lambda_layer/requirements.txt`**, installed into **`cdk/lambda_layer/python/`** (buildspec + `.gitignore`) and deployed as a **Lambda Layer** attached to every onboarding function. `engine/` contains **only** application code. |
 
 Local development: configure AWS credentials and SSM, or use `.env` only for scripts (never commit `.env`).
 
@@ -856,13 +857,14 @@ CDK (cdk/requirements.txt):
   aws-cdk-lib>=2.180.0
   constructs>=10.4.0
 
-Lambda runtime dependencies (declared in **engine/requirements.txt**; installed under **`engine/`** for the deployment zip — CDK does not define a separate Lambda **Layer** in `api_stack.py`):
+Lambda runtime dependencies (declared in **`cdk/lambda_layer/requirements.txt`**; built into a **Lambda Layer** in `api_stack.py`):
 
   hubspot-api-client>=9.0.0
   stripe>=8.0.0
   anthropic>=0.40.0
   requests>=2.31.0
-  boto3>=1.34.0
+
+**Build:** `buildspec.yml` runs `pip install -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python` before `cdk deploy`. **Local:** run the same command (or use Docker bundling if `python/` is empty — see `README.md`). **boto3** is supplied by the Lambda runtime (not listed in the layer file).
 
 ## Appendix C: SSM Parameter Paths (Complete Reference)
 
@@ -892,4 +894,4 @@ Naming convention matches the repository name: dtl-global-platform.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.7.0*
+*End of DTL-Global Platform Master Build Plan v2.8.0*

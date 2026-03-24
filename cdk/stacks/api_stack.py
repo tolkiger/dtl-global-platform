@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os  # Resolve filesystem paths to the Lambda source bundle
 
-from aws_cdk import Duration, RemovalPolicy, Stack, Tags  # CDK core helpers
+from aws_cdk import BundlingOptions, Duration, RemovalPolicy, Stack, Tags  # BundlingOptions layers pip deps
 from aws_cdk import aws_apigateway as apigateway  # REST API constructs
 from aws_cdk import aws_dynamodb as dynamodb  # DynamoDB table references
 from aws_cdk import aws_iam as iam  # IAM policies for Lambda roles
@@ -67,9 +67,42 @@ class ApiStack(Stack):
         stack = Stack.of(self)  # Resolve stack metadata for ARN construction
         region = stack.region  # AWS region for IAM resource ARNs
         account = stack.account  # AWS account id for IAM resource ARNs
-        engine_path = os.path.abspath(  # Absolute path to Lambda source tree
+        engine_path = os.path.abspath(  # Absolute path to Lambda source tree (handlers + shared + templates only)
             os.path.join(os.path.dirname(__file__), "..", "..", "engine"),  # Repo engine/ directory
         )  # End path join
+        lambda_layer_root = os.path.abspath(  # Directory with requirements.txt; optional pre-built python/ subfolder
+            os.path.join(os.path.dirname(__file__), "..", "lambda_layer"),  # cdk/lambda_layer/
+        )  # End path join
+        prebuilt_python = os.path.join(lambda_layer_root, "python")  # Created by buildspec or local: pip install -t python
+        if os.path.isdir(prebuilt_python) and any(  # Prefer pre-built layer (CI and local without Docker)
+            entry != "__pycache__" for entry in os.listdir(prebuilt_python)
+        ):  # Non-empty python/ means skip Docker bundling
+            layer_code = lambda_.Code.from_asset(  # Zip requirements + pre-installed packages only
+                lambda_layer_root,  # Contains python/ with site packages
+                exclude=["**/__pycache__/**", "**/*.pyc", "**/.DS_Store"],  # Shrink asset; keep requirements.txt for audit
+            )  # End from_asset pre-built
+        else:  # Developer machine: bundle with Docker (pip inside SAM image) — requires Docker daemon
+            layer_code = lambda_.Code.from_asset(  # Build layer via Docker bundling
+                lambda_layer_root,  # Folder with requirements.txt
+                bundling=BundlingOptions(  # Run pip inside AWS SAM Python 3.12 build image
+                    image=lambda_.Runtime.PYTHON_3_12.bundling_image,  # Official CDK bundling image for py3.12
+                    command=[  # Install into /asset-output/python per Lambda layer layout
+                        "bash",  # Shell for chained commands
+                        "-c",  # Next arg is script string
+                        "pip install --no-cache-dir -r requirements.txt -t /asset-output/python && "
+                        "find /asset-output/python -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true",
+                    ],  # End bundling command
+                ),  # End BundlingOptions
+            )  # End from_asset Docker
+        python_dependencies_layer = lambda_.LayerVersion(  # Shared pip dependencies for all onboarding Lambdas
+            self,  # Parent construct is this stack
+            "PythonDependenciesLayer",  # Logical id for the layer resource
+            layer_version_name="dtl-onboarding-python-deps",  # Console-friendly layer name
+            description="Third-party Python packages (hubspot-api-client, stripe, anthropic, requests)",  # Human-readable description
+            code=layer_code,  # Pre-built python/ or Docker-bundled asset
+            compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],  # Match function runtime
+            compatible_architectures=[lambda_.Architecture.X86_64],  # Match default Lambda arch
+        )  # End LayerVersion
         common_environment = {  # Shared environment variables for all onboarding Lambdas
             "HUBSPOT_TOKEN_PARAM": "/dtl-global-platform/hubspot/token",  # HubSpot token SSM name
             "STRIPE_SECRET_PARAM": "/dtl-global-platform/stripe/secret",  # Stripe secret SSM name
@@ -107,12 +140,13 @@ class ApiStack(Stack):
                 retention=logs.RetentionDays.ONE_MONTH,  # 30-day log retention for cost optimization
                 removal_policy=RemovalPolicy.DESTROY,  # Allow log group cleanup when stack is deleted
             )  # End log group definition
-            lambda_function = lambda_.Function(  # Python 3.12 function with shared code bundle
+            lambda_function = lambda_.Function(  # Python 3.12 function: app code zip + dependency layer
                 self,  # Parent construct is this stack
                 f"Lambda{module_suffix.title().replace('_', '')}",  # Stable logical id per handler
                 runtime=lambda_.Runtime.PYTHON_3_12,  # Python runtime required by the master plan
                 handler=f"handlers.{handler_id}.lambda_handler",  # Module path inside engine/
-                code=lambda_.Code.from_asset(engine_path),  # Zip the engine/ tree for deployment
+                code=lambda_.Code.from_asset(engine_path),  # Application code only (handlers, shared, templates)
+                layers=[python_dependencies_layer],  # Third-party packages from cdk/lambda_layer requirements
                 timeout=Duration.minutes(5),  # Long-running onboarding steps (master plan: 5 minutes)
                 memory_size=256,  # Memory size per master plan baseline
                 environment=common_environment,  # Inject shared configuration

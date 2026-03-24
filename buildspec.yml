@@ -12,4 +12,6 @@ phases:
       - python3 -m pip install -r cdk/requirements.txt
   build:
     commands:
+      # Pre-build Lambda layer python/ tree so CDK can zip it without Docker (CodeBuild has no Docker daemon by default).
+      - python3 -m pip install --no-cache-dir -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python
       - cd cdk && cdk deploy --all --require-approval never
