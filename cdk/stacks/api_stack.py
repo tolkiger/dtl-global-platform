@@ -144,6 +144,30 @@ class ApiStack(Stack):
                     resources=["*"],  # Route53 requires wildcard for some operations
                 ),  # End Route53 policy statement
             )  # End Route53 add_to_role_policy
+            if module_suffix == "notify":  # Only notifications Lambda sends emails via SES
+                lambda_function.add_to_role_policy(  # Grant SES permissions to the notify handler
+                    iam.PolicyStatement(  # SES permissions for sending onboarding emails
+                        actions=[
+                            "ses:SendEmail",  # Send simple/multipart SES email
+                            "ses:SendRawEmail",  # Send raw SES email (fallback/raw MIME)
+                        ],  # Required SES send actions
+                        resources=[f"arn:aws:ses:{region}:{account}:identity/*"],  # Allow any verified identity in-region
+                    ),  # End SES policy statement
+                )  # End SES add_to_role_policy
+            if module_suffix == "deploy":  # Website deploy handler creates CloudFront distributions
+                lambda_function.add_to_role_policy(  # Grant CloudFront creation permissions
+                    iam.PolicyStatement(  # CloudFront distribution + OAC permissions
+                        actions=[
+                            "cloudfront:CreateDistribution",  # Create distribution for client website
+                            "cloudfront:GetDistribution",  # Read distribution details after creation
+                            "cloudfront:ListDistributions",  # Allow list access for safe lookups
+                            "cloudfront:CreateOriginAccessControl",  # Create OAC for S3 origin security
+                            "cloudfront:GetOriginAccessControl",  # Read OAC details if needed
+                            "cloudfront:ListOriginAccessControls",  # Allow listing OAC resources
+                        ],  # CloudFront API actions used by handler_deploy
+                        resources=["*"],  # CloudFront create actions may require wildcard resource scoping
+                    ),  # End CloudFront policy statement
+                )  # End CloudFront add_to_role_policy
             resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
             resource.add_method(  # Wire POST to the Lambda integration
                 "POST",  # Onboarding actions are invoked via POST bodies

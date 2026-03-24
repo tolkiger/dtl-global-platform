@@ -129,27 +129,32 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'completed_at': datetime.utcnow().isoformat()
         }
         
-        # Step 3: Create/configure CloudFront distribution
-        print("🌐 Step 3: Configuring CloudFront distribution...")
-        cloudfront_config = _configure_cloudfront(client_domain, s3_deployment, deployment_config)
-        deployment_status['steps']['cloudfront_setup'] = {
-            'status': 'completed',
-            'distribution_id': cloudfront_config['distribution_id'],
-            'cloudfront_domain': cloudfront_config['domain_name'],
-            'completed_at': datetime.utcnow().isoformat()
-        }
-        
         # Step 4: Request and configure SSL certificate
         ssl_config = None
         if deployment_config.get('ssl_enabled', True):
             print("🔒 Step 4: Configuring SSL certificate...")
             ssl_config = _configure_ssl_certificate(client_domain, deployment_config)
             deployment_status['steps']['ssl_setup'] = {
-                'status': 'completed' if ssl_config['certificate_arn'] else 'pending',
+                'status': 'completed' if ssl_config.get('certificate_arn') else 'pending',
                 'certificate_arn': ssl_config.get('certificate_arn'),
                 'validation_status': ssl_config.get('validation_status', 'pending'),
                 'completed_at': datetime.utcnow().isoformat()
             }
+        
+        # Step 3: Create/configure CloudFront distribution (must attach trusted ACM cert when aliases are used)
+        print("🌐 Step 3: Configuring CloudFront distribution...")
+        cloudfront_config = _configure_cloudfront(
+            client_domain,
+            s3_deployment,
+            deployment_config,
+            ssl_config
+        )
+        deployment_status['steps']['cloudfront_setup'] = {
+            'status': 'completed',
+            'distribution_id': cloudfront_config['distribution_id'],
+            'cloudfront_domain': cloudfront_config['domain_name'],
+            'completed_at': datetime.utcnow().isoformat()
+        }
         
         # Step 5: Configure DNS records
         print("🌍 Step 5: Configuring DNS records...")
@@ -329,6 +334,8 @@ def _generate_ai_website_content(client_info: Dict[str, Any]) -> Dict[str, str]:
         Dictionary mapping file paths to content
     """
     try:
+        from ai_client import ai_client  # Lazy import so helper functions can access the client
+        
         # Generate comprehensive website prompt using AI client
         website_prompt = ai_client.generate_website_prompt(
             business_info=client_info,
@@ -372,6 +379,8 @@ def _deploy_to_s3(client_domain: str, website_files: Dict[str, str],
         Dictionary containing S3 deployment information
     """
     try:
+        from s3_client import s3_client  # Lazy import so helper functions can access the client
+        
         # Deploy website using enhanced S3 client
         deploy_result = s3_client.deploy_website(
             client_domain=client_domain,
@@ -387,8 +396,9 @@ def _deploy_to_s3(client_domain: str, website_files: Dict[str, str],
         raise Exception(f"Failed to deploy website to S3: {e}")
 
 
-def _configure_cloudfront(client_domain: str, s3_deployment: Dict[str, Any], 
-                        deployment_config: Dict[str, Any]) -> Dict[str, Any]:
+def _configure_cloudfront(client_domain: str, s3_deployment: Dict[str, Any],
+                          deployment_config: Dict[str, Any],
+                          ssl_config: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Configure CloudFront distribution for the client website.
     
     Args:
@@ -451,11 +461,28 @@ def _configure_cloudfront(client_domain: str, s3_deployment: Dict[str, Any],
             }
         }
         
-        # Add custom domain as alias if SSL is enabled
-        if deployment_config.get('ssl_enabled', True):
+        # Add custom domain alias + viewer certificate when we have an ACM cert ready
+        ssl_enabled = deployment_config.get('ssl_enabled', True)  # Determine whether custom SSL is requested
+        certificate_arn = ssl_config.get('certificate_arn') if ssl_config else None  # Extract ACM cert ARN if available
+        validation_status = ssl_config.get('validation_status') if ssl_config else None  # Capture ACM validation status
+        
+        # CloudFront requires an actually-issued (trusted) certificate to add aliases at distribution creation time.
+        # Skip aliases/viewer certificate while ACM is still pending validation to avoid InvalidViewerCertificate errors.
+        status_lower = str(validation_status).lower() if validation_status else ""  # Normalize for comparisons
+        can_attach_aliases = ssl_enabled and bool(certificate_arn) and ("pending" not in status_lower)
+        
+        if can_attach_aliases:
+            # Attach CNAME alias for the client domain
             distribution_config['Aliases'] = {
                 'Quantity': 1,
                 'Items': [client_domain]
+            }
+            
+            # Attach trusted ACM certificate so the alias is valid at distribution creation time
+            distribution_config['ViewerCertificate'] = {
+                'ACMCertificateArn': certificate_arn,
+                'SSLSupportMethod': 'sni-only',
+                'MinimumProtocolVersion': 'TLSv1.2_2021'
             }
         
         # Create CloudFront distribution
@@ -547,6 +574,8 @@ def _request_acm_certificate_with_route53(client_domain: str) -> Dict[str, Any]:
         Dictionary containing certificate information
     """
     try:
+        from route53_client import route53_client  # Lazy import so Route53 helper functions can access the client
+        
         # First ensure hosted zone exists
         hosted_zone = route53_client.get_hosted_zone_by_name(client_domain)
         if not hosted_zone:
@@ -662,6 +691,8 @@ def _configure_route53_dns(client_domain: str, cloudfront_config: Dict[str, Any]
         Dictionary containing Route 53 DNS configuration
     """
     try:
+        from route53_client import route53_client  # Lazy import so Route53 helper functions can access the client
+        
         # Get or create hosted zone
         hosted_zone = route53_client.get_hosted_zone_by_name(client_domain)
         if not hosted_zone:

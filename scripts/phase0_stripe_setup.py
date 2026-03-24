@@ -31,22 +31,28 @@ def _load_secret_key() -> str:
     """Load the Stripe secret API key from the environment.
 
     Returns:
-        A non-empty secret key string (must be sk_test_ for this script).
+        A non-empty secret key string (sk_test_ by default; sk_live_ only when explicitly allowed).
 
     Raises:
         SystemExit: When the key is missing, not test mode, or clearly invalid.
     """
     key = os.environ.get("STRIPE_SECRET_KEY", "").strip()  # Read Stripe key from env
+    allow_live = os.environ.get("DTL_STRIPE_ALLOW_LIVE", "").strip().lower() in ("1", "true", "yes")  # Opt-in for production catalog
     if not key:  # Guard missing configuration
         print("ERROR: STRIPE_SECRET_KEY is not set. Copy .env.example to .env and export variables.")  # Help text
         raise SystemExit(1)  # Abort early
-    if key.startswith("sk_live_"):  # Explicit refusal of production keys per DTL_MASTER_PLAN.md §7.2
-        print("ERROR: This script refuses Stripe live keys (sk_live_). Use SANDBOX keys (sk_test_) only.")  # Clear operator message
-        raise SystemExit(1)  # Abort before any Stripe API calls
+    if key.startswith("sk_live_"):  # Production keys need explicit operator consent
+        if not allow_live:  # Default: refuse live to avoid accidental prod changes
+            print(  # Explain how to enable live idempotent catalog setup
+                "ERROR: This script refuses Stripe live keys (sk_live_) unless you set "
+                "DTL_STRIPE_ALLOW_LIVE=1 (creates real Products/Prices in the live account)."
+            )  # Clear operator message
+            raise SystemExit(1)  # Abort before any Stripe API calls
+        print("WARNING: DTL_STRIPE_ALLOW_LIVE=1 — creating or verifying catalog in LIVE Stripe mode.")  # Loud banner
+        return key  # Return validated live key
     if not key.startswith("sk_test_"):  # Refuse any non-test secret (restricted keys, typos, etc.)
         print(  # Operator-facing error for non-sandbox keys
-            "ERROR: This script only runs with Stripe SANDBOX/TEST keys (sk_test_). "
-            "Refusing to run with live keys."
+            "ERROR: This script only runs with Stripe SANDBOX/TEST keys (sk_test_) or live with DTL_STRIPE_ALLOW_LIVE=1."
         )  # End safety message
         raise SystemExit(1)  # Abort before any Stripe API calls
     return key  # Return validated sandbox key
@@ -176,8 +182,11 @@ def main() -> None:
     Returns:
         None: Runs setup steps and prints progress.
     """
-    stripe.api_key = _load_secret_key()  # Configure global Stripe authentication (sk_test_ only)
-    print("Running in SANDBOX/TEST mode")  # Explicit mode banner for operators
+    stripe.api_key = _load_secret_key()  # Configure global Stripe authentication (test or live when allowed)
+    if stripe.api_key.startswith("sk_live_"):  # Production catalog run
+        print("Running in LIVE / PRODUCTION mode (DTL_STRIPE_ALLOW_LIVE=1)")  # Explicit live banner
+    else:  # Default sandbox
+        print("Running in SANDBOX/TEST mode")  # Explicit mode banner for operators
     print("INFO: Verifying Stripe API access and Connect readiness...")  # Progress banner
     _verify_connect_access()  # Inform operator about Connect
     print("INFO: Ensuring products and prices exist (idempotent)...")  # Progress banner

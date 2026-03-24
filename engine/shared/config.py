@@ -63,7 +63,7 @@ LAMBDA_CONFIG = {
 
 # Stripe configuration constants
 STRIPE_CONFIG = {
-    "api_version": "2024-12-18",  # Latest Stripe API version
+    "api_version": "2024-06-20",  # Valid Stripe API version for stripe SDK
     "currency": "usd",            # Default currency for payments
     "mode": "sandbox"             # Always sandbox until production switch
 }
@@ -205,22 +205,26 @@ class ConfigManager:
         return CLIENT_TYPES[client_type].copy()  # Return copy to prevent modification
     
     def validate_stripe_key(self, stripe_key: str) -> bool:
-        """Validate that Stripe key is in sandbox mode.
+        """Validate that Stripe key is a supported Stripe secret.
         
         Args:
             stripe_key: The Stripe secret key to validate
             
         Returns:
-            True if key is valid sandbox key, False otherwise
+            True when the key is either a test secret (``sk_test_``) or a live secret (``sk_live_``)
         """
-        # Check if key starts with sandbox prefix
-        is_sandbox = stripe_key.startswith('sk_test_')
+        # Accept both sandbox and live keys after the production switch.
+        # The presence of ``sk_live_`` indicates the operator has intentionally switched SSM.
+        is_sandbox = stripe_key.startswith('sk_test_')  # True for Stripe test mode keys
+        is_live = stripe_key.startswith('sk_live_')  # True for Stripe live mode keys
         
-        # Log validation result (for debugging)
-        if not is_sandbox:
-            print(f"WARNING: Stripe key does not appear to be sandbox: {stripe_key[:10]}...")
+        # Log which mode we detected to aid debugging in CloudWatch.
+        if is_live:  # If the key is live, provide a warning but do not block.
+            print("WARNING: Using Stripe LIVE key (sk_live_)")  # Operator signal
+        elif not is_sandbox:  # If it's neither test nor live, it is invalid.
+            print(f"WARNING: Stripe key does not appear to be valid: {stripe_key[:10]}...")  # Debug snippet
         
-        return is_sandbox
+        return is_sandbox or is_live  # Only accept sk_test_ or sk_live_
 
 
 # Global configuration manager instance

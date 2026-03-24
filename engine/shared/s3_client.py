@@ -368,6 +368,7 @@ class S3Client:
         
         # Return deployment information
         return {
+            'bucket': self._websites_bucket,  # Return the actual websites bucket used for hosting
             'client_domain': client_domain,
             'domain_prefix': domain_prefix,
             'deployed_files': deployed_files,

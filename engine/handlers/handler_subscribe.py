@@ -136,6 +136,9 @@ def _validate_subscription_request(request_data: Dict[str, Any]) -> Optional[str
     Returns:
         Error message if validation fails, None if valid
     """
+    # Lazy import so helpers can access the Stripe client in Lambda runtime
+    from stripe_client import stripe_client
+    
     # Check required action field
     if 'action' not in request_data:
         return "Missing required field: action"
@@ -172,9 +175,13 @@ def _validate_subscription_request(request_data: Dict[str, Any]) -> Optional[str
         if 'service_package' not in subscription_config:
             return "service_package is required for create action"
         
-        # Validate against DTL service packages
-        dtl_products = stripe_client.get_dtl_products()
-        valid_packages = [key for key in dtl_products.keys() if 'monthly' in key]
+        # Validate against DTL service packages (allow any recurring product)
+        dtl_products = stripe_client.get_dtl_products()  # Fetch DTL stripe product map
+        valid_packages = [  # Collect all recurring package keys
+            key
+            for key, info in dtl_products.items()
+            if info.get('type') == 'recurring'
+        ]
         
         if subscription_config['service_package'] not in valid_packages:
             return f"Invalid service_package. Must be one of: {', '.join(valid_packages)}"
@@ -201,6 +208,9 @@ def _handle_create_subscription(customer_info: Dict[str, Any],
         Subscription creation result dictionary
     """
     try:
+        # Lazy import so helper has access to the initialized Stripe client
+        from stripe_client import stripe_client
+        
         # Get or create Stripe customer
         stripe_customer = _get_or_create_stripe_customer(customer_info, metadata)
         
@@ -211,10 +221,17 @@ def _handle_create_subscription(customer_info: Dict[str, Any],
         if service_package not in dtl_products:
             raise ValueError(f"Invalid service package: {service_package}")
         
-        package_info = dtl_products[service_package]
+        package_info = dtl_products[service_package]  # Resolved catalog entry for this package
         
-        # Create subscription price (placeholder - would use actual Stripe Price IDs)
-        price_id = _get_price_id_for_package(service_package, package_info)
+        # Require a real Stripe Price ID from catalog enrichment (no fake placeholders).
+        price_id = package_info.get('price_id')  # Set by stripe_client.get_dtl_products() when Dashboard matches
+        if not price_id:  # Missing product/price in this Stripe account
+            raise ValueError(
+                f"No Stripe Price ID found for package '{service_package}'. "
+                f"Create an active Product named exactly '{package_info['name']}' with a recurring price of "
+                f"{package_info['amount']} {package_info['currency']} per {package_info.get('interval', 'month')}, "
+                "or run scripts/phase0_stripe_setup.py (test) or the same script with DTL_STRIPE_ALLOW_LIVE=1 and sk_live_."
+            )  # Fail fast with setup instructions instead of invalid price_... IDs
         
         # Create subscription
         subscription_data = stripe_client.create_subscription(
@@ -312,6 +329,9 @@ def _handle_cancel_subscription(subscription_config: Dict[str, Any],
         Subscription cancellation result dictionary
     """
     try:
+        # Lazy import so helper has access to the initialized Stripe client
+        from stripe_client import stripe_client
+        
         subscription_id = subscription_config['subscription_id']
         cancel_at_period_end = subscription_config.get('cancel_at_period_end', True)
         
@@ -399,6 +419,9 @@ def _get_or_create_stripe_customer(customer_info: Dict[str, Any],
     Returns:
         Stripe customer data dictionary
     """
+    # Lazy import so helper can access the initialized Stripe client
+    from stripe_client import stripe_client
+    
     # Check if customer already exists
     existing_customer = stripe_client.get_customer_by_email(customer_info['email'])
     
@@ -421,30 +444,6 @@ def _get_or_create_stripe_customer(customer_info: Dict[str, Any],
     print(f"Created new Stripe customer: {new_customer['id']}")
     
     return new_customer
-
-
-def _get_price_id_for_package(service_package: str, package_info: Dict[str, Any]) -> str:
-    """Get Stripe price ID for a DTL service package.
-    
-    Args:
-        service_package: Service package identifier
-        package_info: Package information from DTL products
-        
-    Returns:
-        Stripe price ID (placeholder for now)
-    """
-    # Map DTL packages to Stripe price IDs
-    # In production, these would be actual Stripe Price IDs created in your account
-    
-    price_mapping = {
-        'dtl_friends_family': 'price_dtl_friends_family_monthly',
-        'dtl_starter_monthly': 'price_dtl_starter_monthly',
-        'dtl_growth_monthly': 'price_dtl_growth_monthly',
-        'dtl_professional_monthly': 'price_dtl_professional_monthly',
-        'dtl_premium_monthly': 'price_dtl_premium_monthly'
-    }
-    
-    return price_mapping.get(service_package, f'price_{service_package}')
 
 
 def _store_subscription_data(subscription_data: Dict[str, Any], 
@@ -572,6 +571,9 @@ def _send_subscription_confirmation_email(customer_info: Dict[str, Any],
         package_info: DTL package information
     """
     try:
+        # Lazy import so helper can access the initialized SES client
+        from ses_client import ses_client
+        
         # Prepare email content
         subject = f"Subscription Confirmation - {package_info['name']}"
         
