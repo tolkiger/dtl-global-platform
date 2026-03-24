@@ -36,7 +36,7 @@ python3 -m pip install -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/
 python3 -m pip install -r requirements.txt   # dev/test (includes pytest, boto3, etc.)
 ```
 
-If `cdk/lambda_layer/python/` is **empty**, `cdk synth` uses **Docker** bundling for the layer (requires Docker Desktop / daemon).
+If `cdk/lambda_layer/python/` is missing or empty, **`cdk synth` / `cdk deploy` fails** with an error that tells you to run the `pip install` command above (there is no Docker or container bundling in CDK).
 
 **Flow:** Client → **API Gateway** → **Lambda** (`/var/task` = `engine/` code; `/opt/python` = layer) → **`shared/` clients** → HubSpot, Stripe, AWS APIs, Anthropic, etc.
 
