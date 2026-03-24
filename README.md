@@ -1,105 +1,134 @@
 # DTL-Global Platform
 
-🚀 **FULLY OPERATIONAL** AI-powered client onboarding platform for DTL-Global technology consulting.
+Serverless **client onboarding API** for DTL-Global: HubSpot CRM, Stripe billing, website deploy to S3/CloudFront, DNS, notifications (SES), AI (Anthropic), and add-on endpoints (chatbot, Workspace, WhatsApp, collaboration).
 
-**Official website domain:** [dtl-global.org](https://dtl-global.org). Transactional email uses `onboarding@dtl-global.org` (see `DTL_MASTER_PLAN.md` Appendix A).
+**Specifications:** [`DTL_MASTER_PLAN.md`](DTL_MASTER_PLAN.md) is the single source of truth. **Credentials:** [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
-**API Gateway:** `https://vxdtzyxui5.execute-api.us-east-1.amazonaws.com/prod/` ✅ LIVE
+**Production API (example):** `https://vxdtzyxui5.execute-api.us-east-1.amazonaws.com/prod/` — replace with your deployed API Gateway URL after `cdk deploy`.
 
-## Overview
+---
 
-This platform automates the process of onboarding small and medium business clients with:
-- Professional websites (built with Rocket.new, deployed to AWS)
-- HubSpot CRM (customized per industry)
-- Stripe payment processing (via Stripe Connect)
-- Custom email (Google Workspace or Microsoft 365)
-- AI-powered features (chatbots, bid generation, SEO optimization)
+## What this repository is
 
-## Architecture
+| Area | Purpose |
+|------|---------|
+| **`engine/`** | **Lambda deployment bundle** — Python code API Gateway runs (see below). |
+| **`cdk/`** | AWS CDK: **four stacks** (Storage, CDN, API, Pipeline) defining DynamoDB, S3, CloudFront, API Gateway + Lambdas, CodePipeline. |
+| **`scripts/`** | Local tooling: Phase 0 HubSpot/Stripe, SSM setup/verify, onboarding helpers, integration tests. |
+| **`tests/`** | Automated tests for handlers and production scenarios. |
+| **`docs/`** | Authentication notes, operations guides, demos. |
 
-100% serverless on AWS:
-- **Compute:** Lambda (Python 3.12)
-- **API:** API Gateway (REST)
-- **Database:** DynamoDB
-- **Storage:** S3
-- **CDN:** CloudFront
-- **DNS:** Route 53
-- **Email:** SES
-- **CI/CD:** CodePipeline + CodeBuild
-- **IaC:** AWS CDK (Python)
+---
 
-## Project Structure
+## What `engine/` is for
+
+**`engine/` is not a separate repo.** It is the **application root** that CDK zips into each Lambda (`Code.from_asset` → `engine/`).
+
+- **`engine/handlers/`** — One module per REST route (e.g. `handler_crm_setup.py` → `POST /crm-setup`). Each file defines `lambda_handler`.
+- **`engine/shared/`** — Shared libraries: `config` (SSM), `hubspot_client`, `stripe_client`, `ai_client`, `ses_client`, `route53_client`, `s3_client`.
+- **`engine/templates/`** — Industry JSON templates used by onboarding/AI flows.
+- **`engine/requirements.txt`** — Declared dependencies. Third-party packages are typically installed **under** `engine/` so the deployment artifact includes them (no separate Lambda Layer in the current CDK app).
+
+**Flow:** Client → **API Gateway** → **Lambda** (handler in `engine/handlers/`) → **`shared/` clients** → HubSpot, Stripe, AWS APIs, Anthropic, etc.
+
+---
+
+## Architecture (summary)
+
+- **Compute:** AWS Lambda (Python 3.12)
+- **API:** API Gateway (REST), **16** POST routes
+- **Data:** DynamoDB (templates, clients, state)
+- **Storage:** S3 (websites, assets, CSV import)
+- **CDN:** CloudFront (client sites)
+- **DNS / certs:** Route 53, ACM (as used by handlers)
+- **Email:** SES (`SES_FROM_EMAIL` in Lambda env; see plan Appendix A)
+- **Secrets:** SSM Parameter Store (`/dtl-global-platform/...`)
+- **CI/CD:** CodePipeline + CodeBuild (`buildspec.yml`)
+
+---
+
+## Repository layout
 
 ```
 dtl-global-platform/
-├── DTL_MASTER_PLAN.md    # Single source of truth for the entire build
-├── scripts/              # Setup and utility scripts
-├── cdk/                  # AWS CDK infrastructure
-├── engine/               # Lambda function source code
-│   ├── shared/           # Shared modules (API wrappers, config)
-│   ├── handlers/         # Lambda handlers (one per endpoint)
-│   └── templates/        # Industry templates (JSON)
-└── tests/                # Test files
+├── DTL_MASTER_PLAN.md      # Full specification and phase gates
+├── README.md               # This file
+├── buildspec.yml           # CodeBuild: CDK deploy
+├── cdk/                    # Infrastructure (app.py + stacks/)
+├── engine/                 # Lambda source bundle (handlers, shared, templates, deps)
+├── scripts/                # Setup, onboarding, and test drivers
+├── tests/                  # Pytest / handler tests
+├── docs/                   # AUTHENTICATION.md and operations guides
+├── customer_projects/      # Optional per-customer JSON / notes
+└── hubspot/dtl-global-platform-app/   # HubSpot developer app assets
 ```
 
-## Getting Started
+---
 
-1. Read DTL_MASTER_PLAN.md — it contains the complete specification
-2. Read **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** — current HubSpot, Stripe, and Anthropic credential setup
-3. Copy `.env.example` to `.env` and fill in your API keys
-4. Follow the phases in order (Phase 0 through Phase 6)
+## Getting started
 
-### Phase 0 — HubSpot & Stripe (local scripts)
+1. Read **`DTL_MASTER_PLAN.md`** and **`docs/AUTHENTICATION.md`**.
+2. Copy **`.env.example`** to **`.env`** for **local scripts only** (never commit secrets).
+3. Phase 0 (local): create HubSpot + Stripe test resources and SSM parameters (see plan §7–8).
 
-**HubSpot:** use the **developer platform 2025.2** project in **`hubspot/dtl-global-platform-app/`** (CLI upload + install → copy static token). Not legacy apps. **Stripe:** test secret key. Details: [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md).
+Example (after venv + `pip install -r scripts/requirements.txt` and loading `.env`):
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r scripts/requirements.txt
-set -a && source .env && set +a      # load env vars (bash/zsh)
 python scripts/phase0_hubspot_setup.py && python scripts/phase0_hubspot_verify.py
 python scripts/phase0_stripe_setup.py && python scripts/phase0_stripe_verify.py
+python scripts/setup_ssm_parameters.py    # interactive; run once per account
+python scripts/verify_ssm_parameters.py
 ```
 
-Gate: both verify scripts print `RESULT: ALL CHECKS PASSED`. See DTL_MASTER_PLAN.md Section 7.5.
+**Live Stripe catalog (optional, once):** set `DTL_STRIPE_ALLOW_LIVE=1` and `STRIPE_SECRET_KEY` to `sk_live_...` when seeding production products — see plan §7.2.
 
-## Build Phases
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| Bootstrap | Project setup, rules, skills | ✅ Complete |
-| 0 | HubSpot and Stripe setup | ✅ Complete |
-| 1 | CDK infrastructure | ✅ Complete - 4 stacks deployed |
-| 2 | Lambda functions | ✅ Complete - 16 handlers operational |
-| 3 | AI layer | ✅ Complete - Claude Haiku 4.5 integrated |
-| 4 | Website deployment | ✅ Complete - Automated pipeline |
-| 5 | Add-on modules | ✅ Complete - All modules functional |
-| 6 | End-to-end testing | ✅ Complete - Production ready |
-| **API Automation** | **Full automation operational** | 🚀 **LIVE** |
-
-## 🎯 Production Onboarding
-
-The platform is **100% operational** and ready for real customer onboarding:
+**Deploy infrastructure:** from `cdk/`, with AWS credentials configured:
 
 ```bash
-# Automated onboarding for any customer
-python scripts/production_onboarding.py customer_projects/{company}/project.json
-
-# Quick onboarding wrapper
-python scripts/onboard_customer.py "Company Name"
+cd cdk && cdk deploy --all
 ```
 
-### Ready Customers
-- **Business Center Solutions** - Ready for immediate onboarding
-- All customer types supported (11 package variations)
+---
 
-## Tech Stack
+## Onboarding and testing scripts
 
-- **Language:** Python 3.12+
-- **IaC:** AWS CDK
-- **AI (production):** Claude Haiku 4.5 (Anthropic direct API)
-- **AI (development):** Claude Sonnet 4 (Cursor)
-- **CRM:** HubSpot API
-- **Payments:** Stripe + Stripe Connect
-- **Websites:** Rocket.new, GitHub, S3/CloudFront
+| Script | Role |
+|--------|------|
+| `production_onboarding.py` | Full automated onboarding from project JSON |
+| `automated_customer_onboarding.py` | API-driven onboarding flow |
+| `onboard_customer.py` | Company-oriented wrapper |
+| `efficient_onboarding.py` | Lightweight local / Cursor-friendly flow |
+| `test_real_api_business_center.py` | End-to-end API exercise against prod URL (use carefully with live Stripe) |
+| `start_customer_onboarding.py` | Starts a customer onboarding flow (see script docstring) |
+| `switch_to_production.py` | Production switch helper (see script and AUTHENTICATION.md) |
+| `diagnose_api.py` | API diagnostics helper |
+
+---
+
+## Build phases (status)
+
+High-level alignment with `DTL_MASTER_PLAN.md` — see **Current Progress** in the plan for the canonical table.
+
+| Phase | Focus |
+|-------|--------|
+| 0 | HubSpot + Stripe + SSM |
+| 1 | CDK: four stacks |
+| 2 | Lambda handlers + `shared/` |
+| 3–5 | AI, deploy, add-ons |
+| 6 | End-to-end validation |
+
+---
+
+## Tech stack
+
+- **Python** 3.12+
+- **IaC:** AWS CDK (Python)
+- **CRM / payments:** HubSpot API, Stripe + Connect
+- **AI:** Anthropic Claude (Haiku in production paths per plan)
+- **Websites:** GitHub → S3 / CloudFront (Rocket.new or customer repos per onboarding data)
+
+---
+
+## Corporate site
+
+**dtl-global.org** is the corporate site; transactional email for this platform uses the SES identity configured in Lambda (see **`SES_FROM_EMAIL`** in `DTL_MASTER_PLAN.md` Appendix A). Do not confuse customer **client** domains with DTL’s own domain.
