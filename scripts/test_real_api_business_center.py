@@ -19,7 +19,7 @@ class BusinessCenterAPITester:
             "email": "aduarte@businesscentersolutions.net",
             "phone": "(816) 204-7169",
             "contact_name": "Alondra Duarte",
-            "industry": "consulting",
+            "industry": "MANAGEMENT_CONSULTING",  # HubSpot allowed option for "consulting"
             "package": "FREE_WEBSITE_DISCOUNTED",
             "setup_fee": 0,
             "monthly_fee": 20,
@@ -98,13 +98,16 @@ class BusinessCenterAPITester:
             "client_info": {
                 "company": self.business_center_data["company"],
                 "domain": self.business_center_data["domain"],
+                "email": self.business_center_data["email"],  # Required by /deploy handler validation
                 "industry": self.business_center_data["industry"]
             },
             "deployment_config": {
-                "domain": self.business_center_data["domain"],
+                "domain_scenario": "new_domain",  # Not route53-managed (customer uses GoDaddy)
                 "github_repo": "https://github.com/tolkiger/businesscenter",
                 "s3_bucket": f"{self.business_center_data['domain'].replace('.', '-')}-website",
                 "cloudfront_enabled": True,
+                "ssl_enabled": True,  # Keep SSL on (handler defaults to True)
+                "cdn_enabled": True,  # Keep CDN on (handler defaults to True)
                 "created_by": "rocket_new_export"
             }
         }
@@ -212,17 +215,13 @@ class BusinessCenterAPITester:
         
         payload = {
             "action": "create",
-            "client_info": {
-                "company": self.business_center_data["company"],
-                "email": self.business_center_data["email"],
-                "contact_name": self.business_center_data["contact_name"]
+            "customer_info": {
+                "company": self.business_center_data["company"],  # Optional in handler
+                "email": self.business_center_data["email"],  # Required by handler_subscribe
+                "name": self.business_center_data["contact_name"]  # Required by handler_subscribe
             },
             "subscription_config": {
-                "product_name": "DTL-Global Free Website + Discounted Maintenance",
-                "price": self.business_center_data["monthly_fee"],
-                "currency": "usd",
-                "interval": "month",
-                "setup_fee": self.business_center_data["setup_fee"]
+                "service_package": "dtl_friends_family"  # $20/month corresponds to Friends & Family hosting
             }
         }
         
@@ -237,7 +236,7 @@ class BusinessCenterAPITester:
             result = {
                 "endpoint": "subscribe",
                 "status_code": response.status_code,
-                "success": response.status_code == 200,
+                "success": False,  # Set below after inspecting response body
                 "response": response.text,
                 "error": None
             }
@@ -246,6 +245,7 @@ class BusinessCenterAPITester:
                 print("   ✅ Stripe billing setup successful!")
                 try:
                     response_data = response.json()
+                    result["success"] = bool(response_data.get("success", True))  # Treat explicit failure as failure
                     if 'customer_id' in response_data:
                         print(f"   👤 Customer ID: {response_data['customer_id']}")
                     if 'subscription_id' in response_data:
