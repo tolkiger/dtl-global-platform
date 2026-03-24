@@ -144,7 +144,6 @@ class ApiStack(Stack):
                     resources=["*"],  # Route53 requires wildcard for some operations
                 ),  # End Route53 policy statement
             )  # End Route53 add_to_role_policy
-            
             if module_suffix == "notify":  # Only notifications Lambda sends emails via SES
                 lambda_function.add_to_role_policy(  # Grant SES permissions to the notify handler
                     iam.PolicyStatement(  # SES permissions for sending onboarding emails
@@ -155,7 +154,6 @@ class ApiStack(Stack):
                         resources=[f"arn:aws:ses:{region}:{account}:identity/*"],  # Allow any verified identity in-region
                     ),  # End SES policy statement
                 )  # End SES add_to_role_policy
-            
             if module_suffix == "deploy":  # Website deploy handler creates CloudFront distributions
                 lambda_function.add_to_role_policy(  # Grant CloudFront creation permissions
                     iam.PolicyStatement(  # CloudFront distribution + OAC permissions

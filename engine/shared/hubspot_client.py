@@ -375,7 +375,7 @@ class HubSpotClient:
                 raise ValueError(f"{field} is required for deal creation")
         
         try:
-            # Create deal input object
+            # Create deal input object (deals API requires SimplePublicObjectInputForCreate, not contacts model)
             deal_input = DealInput(properties=deal_data)
             
             # Call HubSpot API to create deal
