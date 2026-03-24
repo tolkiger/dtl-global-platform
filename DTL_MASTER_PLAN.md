@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v2.8.0
+# DTL-Global Platform — Master Build Plan v2.8.1
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-24 (v2.8.0 — Python dependencies in Lambda layer from `cdk/lambda_layer/`; slim `engine/` application-only bundle)
+> **Updated:** 2026-03-24 (v2.8.1 — Lambda layer requires pre-built `python/` only; no Docker bundling in CDK)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
 
 ---
@@ -11,7 +11,8 @@
 
 | Version | Changes |
 |---------|---------|
-| v2.8.0 | **Lambda layer for Python dependencies**: `cdk/lambda_layer/requirements.txt` + pre-built `python/` (CI/local) or Docker bundling; `engine/` slimmed to handlers, shared, templates only. CodeBuild runs `pip install -t` before `cdk deploy`. |
+| v2.8.1 | **Lambda layer**: CDK **only** packages pre-built `cdk/lambda_layer/python/` (no Docker/SAM bundling fallback). Run `pip install -t` before synth/deploy locally; same in `buildspec.yml`. |
+| v2.8.0 | **Lambda layer for Python dependencies**: `cdk/lambda_layer/requirements.txt` + pre-built `python/` (CI/local); `engine/` slimmed to handlers, shared, templates only. CodeBuild runs `pip install -t` before `cdk deploy`. |
 | v2.7.0 | **Documentation sync**: Section 2 structure matches repo (four stacks in `cdk/stacks/`, 16 Lambda handlers, seven `shared/` modules). Documented **`engine/`** as the Lambda deployment asset root (handlers + shared + templates + vendored deps from `engine/requirements.txt`). Phase 1 gate text corrected (no separate DNS/SSL/Email stacks). Stripe Phase 0: `phase0_stripe_setup.py` supports optional **`DTL_STRIPE_ALLOW_LIVE=1`** for idempotent **live** catalog seeding (default remains sandbox-only). Appendix B clarifies deployment packaging vs. “layer” wording. |
 | v2.6.0 | **MAJOR simplification**: Removed domain requirements entirely per Rule 003 (No Over-Engineering); deleted DNS, SSL, Email stacks; reduced from 7 to 4 stacks (Storage, CDN, API, Pipeline); uses default AWS URLs and simple SES email verification; eliminates unnecessary complexity for Phase 1 |
 | v2.5.3 | **Rule 013 added**: Latest Constructs Only rule prevents deprecated CDK usage; updated Cursor rules to mandate current best practices and immediate deprecation warning fixes |
@@ -864,7 +865,7 @@ Lambda runtime dependencies (declared in **`cdk/lambda_layer/requirements.txt`**
   anthropic>=0.40.0
   requests>=2.31.0
 
-**Build:** `buildspec.yml` runs `pip install -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python` before `cdk deploy`. **Local:** run the same command (or use Docker bundling if `python/` is empty — see `README.md`). **boto3** is supplied by the Lambda runtime (not listed in the layer file).
+**Build:** `buildspec.yml` runs `pip install -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python` before `cdk deploy`. **Local:** run the same command before `cdk synth` / `cdk deploy`; CDK does not bundle the layer via Docker. **boto3** is supplied by the Lambda runtime (not listed in the layer file).
 
 ## Appendix C: SSM Parameter Paths (Complete Reference)
 
@@ -894,4 +895,4 @@ Naming convention matches the repository name: dtl-global-platform.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.8.0*
+*End of DTL-Global Platform Master Build Plan v2.8.1*

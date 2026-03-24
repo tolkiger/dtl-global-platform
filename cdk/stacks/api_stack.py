@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os  # Resolve filesystem paths to the Lambda source bundle
 
-from aws_cdk import BundlingOptions, Duration, RemovalPolicy, Stack, Tags  # BundlingOptions layers pip deps
+from aws_cdk import Duration, RemovalPolicy, Stack, Tags  # CDK core helpers
 from aws_cdk import aws_apigateway as apigateway  # REST API constructs
 from aws_cdk import aws_dynamodb as dynamodb  # DynamoDB table references
 from aws_cdk import aws_iam as iam  # IAM policies for Lambda roles
@@ -70,36 +70,29 @@ class ApiStack(Stack):
         engine_path = os.path.abspath(  # Absolute path to Lambda source tree (handlers + shared + templates only)
             os.path.join(os.path.dirname(__file__), "..", "..", "engine"),  # Repo engine/ directory
         )  # End path join
-        lambda_layer_root = os.path.abspath(  # Directory with requirements.txt; optional pre-built python/ subfolder
+        lambda_layer_root = os.path.abspath(  # Directory with requirements.txt and pre-built python/ (never Docker in CDK)
             os.path.join(os.path.dirname(__file__), "..", "lambda_layer"),  # cdk/lambda_layer/
         )  # End path join
-        prebuilt_python = os.path.join(lambda_layer_root, "python")  # Created by buildspec or local: pip install -t python
-        if os.path.isdir(prebuilt_python) and any(  # Prefer pre-built layer (CI and local without Docker)
+        prebuilt_python = os.path.join(lambda_layer_root, "python")  # Populated by buildspec or local pip install -t
+        layer_has_packages = os.path.isdir(prebuilt_python) and any(  # Must exist and contain at least one real entry
             entry != "__pycache__" for entry in os.listdir(prebuilt_python)
-        ):  # Non-empty python/ means skip Docker bundling
-            layer_code = lambda_.Code.from_asset(  # Zip requirements + pre-installed packages only
-                lambda_layer_root,  # Contains python/ with site packages
-                exclude=["**/__pycache__/**", "**/*.pyc", "**/.DS_Store"],  # Shrink asset; keep requirements.txt for audit
-            )  # End from_asset pre-built
-        else:  # Developer machine: bundle with Docker (pip inside SAM image) — requires Docker daemon
-            layer_code = lambda_.Code.from_asset(  # Build layer via Docker bundling
-                lambda_layer_root,  # Folder with requirements.txt
-                bundling=BundlingOptions(  # Run pip inside AWS SAM Python 3.12 build image
-                    image=lambda_.Runtime.PYTHON_3_12.bundling_image,  # Official CDK bundling image for py3.12
-                    command=[  # Install into /asset-output/python per Lambda layer layout
-                        "bash",  # Shell for chained commands
-                        "-c",  # Next arg is script string
-                        "pip install --no-cache-dir -r requirements.txt -t /asset-output/python && "
-                        "find /asset-output/python -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true",
-                    ],  # End bundling command
-                ),  # End BundlingOptions
-            )  # End from_asset Docker
+        )  # End non-empty check
+        if not layer_has_packages:  # No Docker/SAM fallback — fail fast with the exact fix command
+            raise RuntimeError(
+                "Lambda layer dependencies are missing: cdk/lambda_layer/python/ is empty or missing. "
+                "Run: python3 -m pip install --no-cache-dir -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python "
+                "(same as buildspec.yml before cdk deploy)."
+            )  # End explicit operator guidance
+        layer_code = lambda_.Code.from_asset(  # Zip requirements.txt + pre-installed packages under python/
+            lambda_layer_root,  # Asset root for the layer version
+            exclude=["**/__pycache__/**", "**/*.pyc", "**/.DS_Store"],  # Smaller zip
+        )  # End from_asset
         python_dependencies_layer = lambda_.LayerVersion(  # Shared pip dependencies for all onboarding Lambdas
             self,  # Parent construct is this stack
             "PythonDependenciesLayer",  # Logical id for the layer resource
             layer_version_name="dtl-onboarding-python-deps",  # Console-friendly layer name
             description="Third-party Python packages (hubspot-api-client, stripe, anthropic, requests)",  # Human-readable description
-            code=layer_code,  # Pre-built python/ or Docker-bundled asset
+            code=layer_code,  # Pre-built python/ tree only
             compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],  # Match function runtime
             compatible_architectures=[lambda_.Architecture.X86_64],  # Match default Lambda arch
         )  # End LayerVersion
