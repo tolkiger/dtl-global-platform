@@ -53,3 +53,6 @@ engine/pydantic*/
 engine/pydantic_core*/
 engine/pydantic-*/
 engine/pydantic_core-*/
+
+# Lambda layer: built by `pip install -t cdk/lambda_layer/python` or CI buildspec (do not commit wheels)
+cdk/lambda_layer/python/

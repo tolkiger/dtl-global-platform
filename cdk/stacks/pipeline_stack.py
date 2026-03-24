@@ -61,7 +61,7 @@ class PipelineStack(Stack):
             build_spec=codebuild.BuildSpec.from_source_filename("buildspec.yml"),  # Standard buildspec location
             environment=codebuild.BuildEnvironment(  # Build container settings
                 build_image=codebuild.LinuxBuildImage.STANDARD_7_0,  # Amazon Linux 2023 image with runtimes
-                privileged=False,  # Privileged mode not required for CDK
+                privileged=False,  # Layer deps are pre-built in buildspec (pip -t cdk/lambda_layer/python); no Docker in CDK
             ),  # End environment
         )  # End CodeBuild project definition
         build_action = codepipeline_actions.CodeBuildAction(  # Build action consuming the source artifact

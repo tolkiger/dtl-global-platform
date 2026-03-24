@@ -2,16 +2,14 @@
 #
 # Install: pip install -r requirements.txt
 #
-# This is for LOCAL testing only. Lambda uses engine/requirements.txt via a layer.
+# Lambda runtime deps match cdk/lambda_layer/requirements.txt (built into a Lambda layer by CDK).
+# boto3 is included here for local scripts/tests; Lambda uses the runtime boto3.
 
-# --- AWS ---
+# --- Same pins as Lambda layer (cdk/lambda_layer/requirements.txt) ---
+-r cdk/lambda_layer/requirements.txt
+
+# --- AWS (local / tests; Lambda runtime supplies boto3) ---
 boto3>=1.34.0
-
-# --- External APIs ---
-hubspot-api-client>=9.0.0
-stripe>=8.0.0
-anthropic>=0.40.0
-requests>=2.31.0
 
 # --- CDK ---
 aws-cdk-lib>=2.180.0

@@ -22,14 +22,23 @@ Serverless **client onboarding API** for DTL-Global: HubSpot CRM, Stripe billing
 
 ## What `engine/` is for
 
-**`engine/` is not a separate repo.** It is the **application root** that CDK zips into each Lambda (`Code.from_asset` → `engine/`).
+**`engine/` is not a separate repo.** It is the **application code** CDK zips into each Lambda (`Code.from_asset` → `engine/`) — **handlers, shared, templates only** (no vendored wheels in git).
 
 - **`engine/handlers/`** — One module per REST route (e.g. `handler_crm_setup.py` → `POST /crm-setup`). Each file defines `lambda_handler`.
 - **`engine/shared/`** — Shared libraries: `config` (SSM), `hubspot_client`, `stripe_client`, `ai_client`, `ses_client`, `route53_client`, `s3_client`.
 - **`engine/templates/`** — Industry JSON templates used by onboarding/AI flows.
-- **`engine/requirements.txt`** — Declared dependencies. Third-party packages are typically installed **under** `engine/` so the deployment artifact includes them (no separate Lambda Layer in the current CDK app).
+- **Third-party packages (HubSpot SDK, Stripe, Anthropic, requests, …)** live in a **Lambda layer** built from **`cdk/lambda_layer/requirements.txt`**. CI runs `pip install -t cdk/lambda_layer/python` before `cdk deploy` (`buildspec.yml`). That directory is **gitignored**; do not commit built wheels.
 
-**Flow:** Client → **API Gateway** → **Lambda** (handler in `engine/handlers/`) → **`shared/` clients** → HubSpot, Stripe, AWS APIs, Anthropic, etc.
+**Local CDK / tests:** install the same pins as the layer, then run tests:
+
+```bash
+python3 -m pip install -r cdk/lambda_layer/requirements.txt -t cdk/lambda_layer/python   # layer asset for cdk synth/deploy
+python3 -m pip install -r requirements.txt   # dev/test (includes pytest, boto3, etc.)
+```
+
+If `cdk/lambda_layer/python/` is **empty**, `cdk synth` uses **Docker** bundling for the layer (requires Docker Desktop / daemon).
+
+**Flow:** Client → **API Gateway** → **Lambda** (`/var/task` = `engine/` code; `/opt/python` = layer) → **`shared/` clients** → HubSpot, Stripe, AWS APIs, Anthropic, etc.
 
 ---
 
@@ -55,7 +64,8 @@ dtl-global-platform/
 ├── README.md               # This file
 ├── buildspec.yml           # CodeBuild: CDK deploy
 ├── cdk/                    # Infrastructure (app.py + stacks/)
-├── engine/                 # Lambda source bundle (handlers, shared, templates, deps)
+├── cdk/lambda_layer/       # requirements.txt for Lambda layer (python/ is build output, gitignored)
+├── engine/                 # Lambda function code only (handlers, shared, templates)
 ├── scripts/                # Setup, onboarding, and test drivers
 ├── tests/                  # Pytest / handler tests
 ├── docs/                   # AUTHENTICATION.md and operations guides
