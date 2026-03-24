@@ -16,10 +16,20 @@ Author: DTL-Global Platform
 import json
 from typing import Dict, List, Optional, Any, Union
 from hubspot import HubSpot
-from hubspot.crm.contacts import SimplePublicObjectInputForCreate, ApiException
-from hubspot.crm.companies import SimplePublicObjectInput as CompanyInput
+from hubspot.crm.contacts import (  # Contact create/update models and errors
+    SimplePublicObjectInputForCreate,
+    SimplePublicObjectInput,
+    ApiException,
+)
+from hubspot.crm.companies import SimplePublicObjectInputForCreate as CompanyInput
+from hubspot.crm.companies import SimplePublicObjectInput as CompanyUpdateInput
 from hubspot.crm.deals import SimplePublicObjectInputForCreate as DealInput
 from hubspot.crm.pipelines import PipelineInput, PipelineStageInput
+from hubspot.crm.associations.models.batch_input_public_association import (  # Association batch models
+    BatchInputPublicAssociation,
+)
+from hubspot.crm.associations.models.public_association import PublicAssociation  # Association input model
+from hubspot.crm.associations.models.public_object_id import PublicObjectId  # Object id wrapper model
 
 from config import config
 
@@ -69,7 +79,6 @@ class HubSpotClient:
         try:
             # Create contact input object
             contact_input = SimplePublicObjectInputForCreate(properties=contact_data)
-            
             # Call HubSpot API to create contact
             response = self._client.crm.contacts.basic_api.create(
                 simple_public_object_input_for_create=contact_input
@@ -86,6 +95,41 @@ class HubSpotClient:
         except ApiException as e:
             # Handle HubSpot API errors
             error_msg = f"Failed to create contact: {e}"
+            if hasattr(e, 'body'):
+                error_msg += f" - {e.body}"
+            raise ApiException(error_msg) from e
+    
+    def update_contact(self, contact_id: str, contact_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update properties on an existing HubSpot contact.
+        
+        Args:
+            contact_id: HubSpot CRM contact object id (for example from search or create).
+            contact_data: Property map to apply (firstname, lastname, phone, company, etc.).
+        
+        Returns:
+            Dictionary with contact id, properties, created_at, and updated_at from the API.
+        
+        Raises:
+            ValueError: If contact_id is missing or empty.
+            ApiException: If the HubSpot API rejects the update.
+        """
+        if not contact_id:
+            raise ValueError("contact_id is required for contact update")
+        
+        try:
+            contact_input = SimplePublicObjectInput(properties=contact_data)
+            response = self._client.crm.contacts.basic_api.update(
+                contact_id=str(contact_id),
+                simple_public_object_input=contact_input,
+            )
+            return {
+                'id': response.id,
+                'properties': response.properties,
+                'created_at': response.created_at,
+                'updated_at': response.updated_at,
+            }
+        except ApiException as e:
+            error_msg = f"Failed to update contact {contact_id}: {e}"
             if hasattr(e, 'body'):
                 error_msg += f" - {e.body}"
             raise ApiException(error_msg) from e
@@ -162,7 +206,7 @@ class HubSpotClient:
             
             # Call HubSpot API to create company
             response = self._client.crm.companies.basic_api.create(
-                simple_public_object_input=company_input
+                simple_public_object_input_for_create=company_input
             )
             
             # Return company data with HubSpot ID
@@ -176,6 +220,137 @@ class HubSpotClient:
         except ApiException as e:
             # Handle HubSpot API errors
             error_msg = f"Failed to create company: {e}"
+            raise ApiException(error_msg) from e
+    
+    def get_company_by_domain(self, domain: str) -> Optional[Dict[str, Any]]:
+        """Return the first active company whose primary domain matches.
+        
+        Args:
+            domain: Domain string (e.g. businesscentersolutions.net); www. is stripped.
+        
+        Returns:
+            Company dict with id and properties, or None if no match.
+        
+        Raises:
+            ApiException: If the HubSpot search API fails.
+        """
+        normalized = domain.strip().lower()  # HubSpot stores domains without scheme
+        if normalized.startswith("www."):  # Match HubSpot's typical domain field
+            normalized = normalized[4:]  # strip leading www.
+        if not normalized:
+            return None  # Nothing to search
+        
+        search_request = {
+            "filterGroups": [
+                {
+                    "filters": [
+                        {
+                            "propertyName": "domain",
+                            "operator": "EQ",
+                            "value": normalized,
+                        }
+                    ]
+                }
+            ],
+            "limit": 1,
+        }
+        try:
+            response = self._client.crm.companies.search_api.do_search(
+                public_object_search_request=search_request
+            )
+            if response.results:
+                company = response.results[0]
+                return {
+                    "id": company.id,
+                    "properties": company.properties,
+                    "created_at": company.created_at,
+                    "updated_at": company.updated_at,
+                }
+            return None
+        except ApiException as e:
+            error_msg = f"Failed to search company by domain {normalized}: {e}"
+            raise ApiException(error_msg) from e
+    
+    def get_company_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Return the first active company with an exact name match.
+        
+        Args:
+            name: Company display name (must match HubSpot `name` property exactly).
+        
+        Returns:
+            Company dict with id and properties, or None if no match.
+        
+        Raises:
+            ApiException: If the HubSpot search API fails.
+        """
+        trimmed = name.strip()  # Avoid leading/trailing whitespace mismatches
+        if not trimmed:
+            return None
+        
+        search_request = {
+            "filterGroups": [
+                {
+                    "filters": [
+                        {
+                            "propertyName": "name",
+                            "operator": "EQ",
+                            "value": trimmed,
+                        }
+                    ]
+                }
+            ],
+            "limit": 1,
+        }
+        try:
+            response = self._client.crm.companies.search_api.do_search(
+                public_object_search_request=search_request
+            )
+            if response.results:
+                company = response.results[0]
+                return {
+                    "id": company.id,
+                    "properties": company.properties,
+                    "created_at": company.created_at,
+                    "updated_at": company.updated_at,
+                }
+            return None
+        except ApiException as e:
+            error_msg = f"Failed to search company by name {trimmed}: {e}"
+            raise ApiException(error_msg) from e
+    
+    def update_company(self, company_id: str, company_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update properties on an existing HubSpot company.
+        
+        Args:
+            company_id: HubSpot CRM company object id.
+            company_data: Property map (name, domain, phone, industry, etc.).
+        
+        Returns:
+            Dictionary with company id, properties, created_at, and updated_at.
+        
+        Raises:
+            ValueError: If company_id is missing.
+            ApiException: If the HubSpot API rejects the update.
+        """
+        if not company_id:
+            raise ValueError("company_id is required for company update")
+        
+        try:
+            company_input = CompanyUpdateInput(properties=company_data)
+            response = self._client.crm.companies.basic_api.update(
+                company_id=str(company_id),
+                simple_public_object_input=company_input,
+            )
+            return {
+                "id": response.id,
+                "properties": response.properties,
+                "created_at": response.created_at,
+                "updated_at": response.updated_at,
+            }
+        except ApiException as e:
+            error_msg = f"Failed to update company {company_id}: {e}"
+            if hasattr(e, "body"):
+                error_msg += f" - {e.body}"
             raise ApiException(error_msg) from e
     
     def create_deal(self, deal_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -296,18 +471,43 @@ class HubSpotClient:
             ApiException: If HubSpot API call fails
         """
         try:
-            # Create association between contact and company
-            self._client.crm.contacts.associations_api.create(
-                contact_id=contact_id,
-                to_object_type='companies',
-                to_object_id=company_id,
-                association_type='contact_to_company'
+            # Build association batch input for contacts -> companies
+            batch_input = BatchInputPublicAssociation(
+                inputs=[
+                    PublicAssociation(
+                        _from=PublicObjectId(id=str(contact_id)),  # From object id (contact)
+                        to=PublicObjectId(id=str(company_id)),  # To object id (company)
+                        type='contact_to_company',  # Association type key
+                    )
+                ]
+            )
+            
+            # Create association using the HubSpot associations batch endpoint
+            self._client.crm.associations.batch_api.create(
+                from_object_type='contacts',  # Source object type
+                to_object_type='companies',  # Target object type
+                batch_input_public_association=batch_input,  # Association payload
             )
             
             return True  # Association successful
             
         except ApiException as e:
-            # Handle HubSpot API errors
+            # Idempotent re-runs: association may already exist between this contact and company
+            err_text = f"{e} {getattr(e, 'body', '') or ''}".lower()
+            if any(
+                phrase in err_text
+                for phrase in (
+                    "already exists",
+                    "already associated",
+                    "duplicate",
+                    "conflict",
+                )
+            ):
+                print(
+                    f"Note: contact {contact_id} to company {company_id} association skipped "
+                    f"(already present or duplicate)."
+                )
+                return True
             error_msg = f"Failed to associate contact {contact_id} to company {company_id}: {e}"
             raise ApiException(error_msg) from e
     
@@ -325,12 +525,22 @@ class HubSpotClient:
             ApiException: If HubSpot API call fails
         """
         try:
-            # Create association between contact and deal
-            self._client.crm.contacts.associations_api.create(
-                contact_id=contact_id,
-                to_object_type='deals',
-                to_object_id=deal_id,
-                association_type='contact_to_deal'
+            # Build association batch input for contacts -> deals
+            batch_input = BatchInputPublicAssociation(
+                inputs=[
+                    PublicAssociation(
+                        _from=PublicObjectId(id=str(contact_id)),  # From object id (contact)
+                        to=PublicObjectId(id=str(deal_id)),  # To object id (deal)
+                        type='contact_to_deal',  # Association type key
+                    )
+                ]
+            )
+            
+            # Create association using the HubSpot associations batch endpoint
+            self._client.crm.associations.batch_api.create(
+                from_object_type='contacts',  # Source object type
+                to_object_type='deals',  # Target object type
+                batch_input_public_association=batch_input,  # Association payload
             )
             
             return True  # Association successful

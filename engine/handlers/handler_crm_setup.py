@@ -63,33 +63,53 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return _create_error_response(400, "Missing required parameter: email in client_info")
         
         # Create/update HubSpot contact
+        # Get contact name from either 'contact_name' or 'name' field
+        full_name = client_info.get('contact_name', client_info.get('name', ''))
+        name_parts = full_name.split(' ') if full_name else ['', '']
+        
+        industry_input = client_info.get('industry', '')  # Capture caller-provided industry value
+        normalized_industry = industry_input  # Default to the raw value unless we normalize it
+        if isinstance(industry_input, str) and industry_input.strip().lower() == 'consulting':
+            normalized_industry = 'MANAGEMENT_CONSULTING'  # HubSpot's allowed enum for "consulting"
+        
         contact_data = {
             'email': client_info['email'],
-            'firstname': client_info.get('name', '').split(' ')[0] if client_info.get('name') else '',
-            'lastname': ' '.join(client_info.get('name', '').split(' ')[1:]) if client_info.get('name') and len(client_info.get('name', '').split(' ')) > 1 else '',
+            'firstname': name_parts[0] if name_parts else '',
+            'lastname': ' '.join(name_parts[1:]) if len(name_parts) > 1 else '',
             'company': client_info.get('company', ''),
             'phone': client_info.get('phone', ''),
-            'industry': client_info.get('industry', ''),
+            'industry': normalized_industry,  # Use normalized industry value for HubSpot enum validation
             'lifecyclestage': 'customer',
         }
         
-        # Check if contact exists
+        # Create contact if missing, or update properties if the contact already exists
         existing_contact = hubspot_client.get_contact_by_email(client_info['email'])
         if existing_contact:
-            contact = existing_contact
+            contact = hubspot_client.update_contact(str(existing_contact['id']), contact_data)
         else:
             contact = hubspot_client.create_contact(contact_data)
         
-        # Create company if specified
+        # Resolve company by domain (preferred) or exact name; create only when missing
         company = None
-        if client_info.get('company'):
+        company_name = (client_info.get('company') or '').strip()
+        if company_name:
             company_data = {
-                'name': client_info['company'],
-                'industry': client_info.get('industry', ''),
+                'name': company_name,
+                'industry': normalized_industry,
                 'phone': client_info.get('phone', ''),
-                'domain': client_info.get('domain', '')
             }
-            company = hubspot_client.create_company(company_data)
+            domain_val = (client_info.get('domain') or '').strip()
+            if domain_val:
+                company_data['domain'] = domain_val
+            existing_company = None
+            if domain_val:
+                existing_company = hubspot_client.get_company_by_domain(domain_val)
+            if not existing_company:
+                existing_company = hubspot_client.get_company_by_name(company_name)
+            if existing_company:
+                company = hubspot_client.update_company(str(existing_company['id']), company_data)
+            else:
+                company = hubspot_client.create_company(company_data)
             hubspot_client.associate_contact_to_company(contact['id'], company['id'])
         
         # Create onboarding deal
@@ -100,7 +120,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'dealstage': pipeline_stages['build'],
             'amount': str(request_data.get('setup_cost', 500)),
             'dealtype': 'newbusiness',
-            'closedate': (datetime.utcnow() + timedelta(days=14)).isoformat(),
+            # HubSpot expects `closedate` as a long/int (Unix milliseconds), not an ISO string
+            'closedate': int((datetime.utcnow() + timedelta(days=14)).timestamp() * 1000),
             'deal_currency_code': 'USD'
         }
         
