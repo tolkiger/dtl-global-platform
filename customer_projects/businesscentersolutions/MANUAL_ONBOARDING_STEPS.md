@@ -2,149 +2,65 @@
 
 **Customer**: Business Center Solutions  
 **Contact**: Alondra Duarte (aduarte@businesscentersolutions.net)  
-**Package**: Free Website + Discounted Maintenance ($0 setup / $20 monthly)  
+**Package** (customer-onboarding skill): **Friends & Family** — **$100** one-time setup + **$20/mo** hosting/maintenance  
+**Note**: Skill lists Friends & Family as **$0 setup / $20 mo**; this deal adds a **$100 setup** as agreed.  
 **GitHub Repo**: https://github.com/tolkiger/businesscenter  
 **Domain**: businesscentersolutions.net (GoDaddy DNS)  
+**Project file**: `customer_projects/businesscentersolutions/DTL-BUSINESSCENTERSOLUTIONS-20260323.json`  
 
-## Immediate Action Items
+## How the website gets created (onboarding flow)
 
-### 1. HubSpot CRM Setup (Manual)
-- [ ] **Create Contact**:
-  - Name: Alondra Duarte
-  - Email: aduarte@businesscentersolutions.net
-  - Phone: (816) 204-7169
-  - Company: Business Center Solutions
-  - Industry: Consulting
+The **site itself** is not generated inside Lambda. The intended flow is:
 
-- [ ] **Create Deal**:
-  - Deal Name: "Business Center Solutions - Free Website + Discounted"
-  - Pipeline: DTL Onboarding
-  - Stage: Build Website
-  - Deal Amount: $0 (setup fee)
-  - Monthly Value: $20
-  - Close Date: Today
+1. **Build in Rocket.new** (or another toolchain you use): design and implement the customer site in Rocket.new.
+2. **Export to GitHub**: Rocket.new Code View → GitHub → push to a repo (this project uses `tolkiger/businesscenter`; the skill’s naming pattern is often `{company}-website`).
+3. **Host on AWS**: CI (e.g. GitHub Actions) builds static output and syncs to **S3**; **CloudFront** serves it with **TLS (ACM)**. Your **`POST /deploy`** path (and/or manual AWS steps in this checklist) wires infra to that repo’s build output.
+4. **DNS**: Customer (GoDaddy) points the domain at CloudFront (CNAME/alias + any ACM validation records).
 
-### 2. Infrastructure Deployment (AWS Console)
+So: **Lambdas orchestrate CRM, billing, DNS instructions, deploy API** — the **HTML/JS/assets** come from **your build (Rocket.new → GitHub → build → S3)**.
 
-**S3 Bucket Setup:**
-- [ ] Create S3 bucket: `businesscentersolutions-net-website`
-- [ ] Enable static website hosting
-- [ ] Configure bucket policy for public read access
-- [ ] Set up GitHub Actions deployment (connect to `tolkiger/businesscenter` repo)
+## Production gate (before real charges)
 
-**CloudFront Distribution:**
-- [ ] Create CloudFront distribution
-- [ ] Origin: S3 bucket (businesscentersolutions-net-website)
-- [ ] Alternate domain names: `businesscentersolutions.net`, `www.businesscentersolutions.net`
-- [ ] SSL Certificate: Request new ACM certificate
+Per `.cursor/skills/customer-onboarding/SKILL.md`: confirm **Stripe live mode**, SSM live keys, and `scripts/phase0_stripe_setup.py` for live products before invoicing or subscribing this customer.
 
-**SSL Certificate (ACM):**
-- [ ] Request certificate for `businesscentersolutions.net` and `*.businesscentersolutions.net`
-- [ ] Note DNS validation records for customer
+## Immediate action items
 
-### 3. DNS Instructions for Customer
+### 1. HubSpot CRM (manual)
 
-**Send to Alondra Duarte:**
+- [ ] **Contact** (if not already present): name, email, phone, company, industry as before.  
+- [ ] **Deal**:
+  - Deal name: `Business Center Solutions - Friends & Family ($100 setup / $20 mo)`  
+  - Pipeline: DTL Onboarding  
+  - Stage: Build Website (or current)  
+  - Deal amount: **$100** (setup)  
+  - Monthly value: **$20**  
 
-```
-Subject: DNS Configuration Required - Business Center Solutions Website
+### 2. Infrastructure (AWS)
 
-Hi Alondra,
+S3, CloudFront, ACM; GitHub Actions from `tolkiger/businesscenter`. See `Deployment_Checklist.md`.
 
-Your website infrastructure is being deployed. Please add these DNS records in your GoDaddy account:
+### 3. DNS instructions for customer
 
-WEBSITE ROUTING:
-Record Type: CNAME
-Name: www
-Value: [CloudFront distribution domain - will be provided]
-TTL: 300
+Send CloudFront target and ACM validation records when ready.
 
-Record Type: A
-Name: @  
-Value: [CloudFront IP - will be provided]
-TTL: 300
+### 4. Stripe billing (manual)
 
-SSL CERTIFICATE VALIDATION:
-Record Type: CNAME
-Name: _acme-challenge
-Value: [SSL validation record - will be provided]
-TTL: 300
+- [ ] **Customer**: Business Center Solutions — aduarte@businesscentersolutions.net  
+- [ ] **One-time setup**: Invoice **$100.00** USD (`invoice_items[].amount` = `10000` cents).  
+- [ ] **Subscription**: **$20/month** — use **DTL Friends and Family Hosting** (`dtl_friends_family` in `engine/shared/stripe_client.py`) or equivalent $20/mo recurring price.  
 
-Timeline: Please add these records within 24 hours. Your website will be live 2-4 hours after DNS propagation.
+### 5. Customer communication
 
-Best regards,
-DTL-Global Team
-```
+- **$100** setup + **$20/mo** Friends & Family hosting/maintenance; domain, repo, DNS, support, project ID **DTL-BUSINESSCENTERSOLUTIONS-20260323**.  
 
-### 4. Stripe Billing Setup (Manual)
+## Completion checklist
 
-**Stripe Dashboard:**
-- [ ] Create customer: "Business Center Solutions"
-- [ ] Email: aduarte@businesscentersolutions.net
-- [ ] Create subscription:
-  - Product: "DTL-Global Free Website + Discounted Maintenance"
-  - Price: $20/month
-  - Start date: Today
-  - Description: "Monthly maintenance for businesscentersolutions.net"
+- [ ] HubSpot deal shows **$100** setup + **$20** MRR  
+- [ ] Stripe: **$100** one-time + **$20/mo** subscription  
+- [ ] Site pipeline: repo builds and deploys to S3/CloudFront  
+- [ ] DNS live  
 
-### 5. Customer Communication
+## Support
 
-**Welcome Email Template:**
-
-```
-Subject: Welcome to DTL-Global - Your Website is Being Built!
-
-Hi Alondra,
-
-Welcome to DTL-Global! We're excited to build your website for Business Center Solutions.
-
-PROJECT DETAILS:
-• Domain: businesscentersolutions.net
-• Package: Free Website + Discounted Maintenance
-• Monthly Fee: $20/month
-• GitHub Repository: https://github.com/tolkiger/businesscenter
-
-NEXT STEPS:
-1. We're deploying your website infrastructure on AWS
-2. You'll receive DNS configuration instructions within 24 hours
-3. Your website will be live 2-4 hours after DNS setup
-4. We'll schedule a training session once everything is ready
-
-BILLING:
-• Setup Fee: $0 (waived)
-• Monthly Maintenance: $20/month (starts today)
-• First invoice will be sent shortly
-
-SUPPORT:
-• Email: support@dtl-global.org
-• Project ID: DTL-BUSINESSCENTERSOLUTIONS-20260323
-
-We'll keep you updated on progress!
-
-Best regards,
-DTL-Global Team
-```
-
-## Completion Checklist
-
-- [ ] HubSpot contact and deal created
-- [ ] AWS infrastructure deployed (S3, CloudFront, SSL)
-- [ ] DNS instructions sent to customer
-- [ ] Stripe subscription created and activated
-- [ ] Welcome email sent to customer
-- [ ] Project status updated to "In Progress - Awaiting DNS"
-- [ ] Follow-up scheduled for DNS configuration verification
-
-## Timeline
-
-- **Today**: Infrastructure deployment, HubSpot/Stripe setup, customer communication
-- **Within 24 hours**: DNS records provided to customer
-- **2-4 hours after DNS**: Website live and functional
-- **Within 48 hours**: Customer training session scheduled
-
-## Support Information
-
-**Customer Contact**: aduarte@businesscentersolutions.net  
+**Email**: aduarte@businesscentersolutions.net  
 **Project ID**: DTL-BUSINESSCENTERSOLUTIONS-20260323  
-**GitHub Repo**: https://github.com/tolkiger/businesscenter  
-**Monthly Billing**: $20 (starts immediately)  
