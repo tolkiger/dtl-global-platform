@@ -1,22 +1,37 @@
 {
-  "company": "Business Center Solutions",
-  "domain": "businesscentersolutions.net",
-  "email": "aduarte@businesscentersolutions.net",
-  "phone": "(816) 204-7169",
-  "contact_name": "Alondra Duarte",
-  "industry": "consulting",
-  "package": "free_website_discounted",
-  "setup_fee": 0,
-  "monthly_fee": 20,
-  "services": [
-    "dns",
-    "website",
-    "support"
-  ],
-  "project_id": "DTL-BUSINESSCENTERSOLUTIONS-20260323",
-  "created": "2026-03-23T01:35:15.422235",
-  "github_repo": "https://github.com/tolkiger/businesscenter",
-  "status": "completed",
+  "customer_info": {
+    "company": "Business Center Solutions",
+    "domain": "businesscentersolutions.net",
+    "email": "aduarte@businesscentersolutions.net",
+    "phone": "(816) 204-7169",
+    "contact_name": "Alondra Duarte",
+    "industry": "consulting",
+    "package_info": {
+      "package": "friends_family",
+      "setup_fee": 100,
+      "monthly_fee": 20,
+      "package_label": "Friends & Family hosting/maintenance + $100 setup (custom)"
+    },
+    "tech_requirements": {
+      "github_repo": "https://github.com/tolkiger/businesscenter",
+      "manage_dns": false,
+      "dns_provider": "godaddy"
+    }
+  },
+  "project_metadata": {
+    "project_id": "DTL-BUSINESSCENTERSOLUTIONS-20260323",
+    "created_date": "2026-03-23T01:35:15.422235",
+    "last_updated": "2026-03-24T00:00:00.000000",
+    "status": "implementation",
+    "client_type_skill": "friends_family",
+    "notes": "Friends & Family tier: $20/mo per skill; $100 one-time setup added per agreement (skill default is $0 setup)."
+  },
+  "legacy_flat_snapshot": {
+    "previous_package": "discounted_maintenance",
+    "previous_setup_fee": 100,
+    "previous_monthly_fee": 49,
+    "revised_date": "2026-03-24"
+  },
   "onboarding_results": {
     "customer": "Business Center Solutions",
     "steps": {
@@ -43,6 +58,5 @@
     },
     "success": true,
     "errors": []
-  },
-  "last_updated": "2026-03-23T02:35:44.636363"
+  }
 }

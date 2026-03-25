@@ -5,7 +5,7 @@
 - [x] GitHub repo identified: https://github.com/tolkiger/businesscenter
 - [ ] Deploy infrastructure: `curl -X POST {api}/deploy`
 - [ ] Configure DNS records
-- [ ] Set up billing: $20/month
+- [ ] Set up billing: $100 setup + $20/mo (Friends & Family)
 
 ## Post-Deployment  
 - [ ] Test website functionality
