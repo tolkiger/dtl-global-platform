@@ -14,6 +14,7 @@ Author: DTL-Global Platform
 
 import os
 import boto3
+import requests
 from typing import Dict, List, Optional
 from botocore.exceptions import ClientError
 
@@ -24,6 +25,8 @@ SSM_PARAMS = {
     "stripe_secret": "/dtl-global-platform/stripe/secret", 
     "stripe_connect_client_id": "/dtl-global-platform/stripe/connect_client_id",
     "anthropic_api_key": "/dtl-global-platform/anthropic/api_key",
+    "stripe_webhook_secret": "/dtl-global-platform/stripe/webhook_secret",
+    "slack_webhook_url": "/dtl-global-platform/slack/webhook_url",
 }
 
 # Client type definitions mapping to required services
