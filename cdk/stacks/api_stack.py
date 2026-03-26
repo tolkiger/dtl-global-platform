@@ -186,7 +186,14 @@ class ApiStack(Stack):
                     ),  # End SES policy statement
                 )  # End SES add_to_role_policy
             # No CloudFront permissions needed - handler_deploy was removed in Phase 7
-            resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
+            # Handle nested routes (e.g., webhook/stripe)
+            if route_path == "webhook/stripe":
+                # Create webhook resource if it doesn't exist
+                webhook_resource = rest_api.root.add_resource("webhook")
+                resource = webhook_resource.add_resource("stripe")
+            else:
+                resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
+            
             resource.add_method(  # Wire POST to the Lambda integration
                 "POST",  # Onboarding actions are invoked via POST bodies
                 apigateway.LambdaIntegration(lambda_function),  # Lambda proxy integration
