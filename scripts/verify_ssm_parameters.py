@@ -17,6 +17,8 @@ _EXPECTED_PARAMETERS: list[str] = [
     "/dtl-global-platform/stripe/connect_client_id",  # Stripe Connect client id
     "/dtl-global-platform/anthropic/api_key",  # Anthropic API key
     "/dtl-global-platform/github/codestar_connection_arn",  # CodeStar Connections ARN for GitHub
+    "/dtl-global-platform/stripe/webhook_secret",  # Stripe webhook signing secret
+    "/dtl-global-platform/slack/webhook_url",  # Slack incoming webhook URL
 ]
 
 

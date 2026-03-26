@@ -42,7 +42,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Returns:
         API Gateway proxy response with onboarding status and results
         
-    Expected Request Body:
+    Expected Request Body (Option 1 - Legacy):
         {
             "client_info": {
                 "name": "Client Name",
@@ -61,6 +61,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             },
             "bid_id": "uuid-from-bid-handler"  // Optional: link to existing bid
         }
+        
+    Expected Request Body (Option 2 - HubSpot Webhook):
+        {
+            "deal_id": "12345678901"  // HubSpot deal ID - fetch all client info from HubSpot
+        }
     """
     print(f"Onboarding orchestration started - Request ID: {context.aws_request_id}")
     
@@ -75,16 +80,31 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             return _create_error_response(400, f"Invalid JSON in request body: {e}")
         
-        # Validate required fields
-        validation_error = _validate_onboard_request(request_data)
-        if validation_error:
-            return _create_error_response(400, validation_error)
-        
-        # Extract onboarding data
-        client_info = request_data['client_info']
-        client_type = request_data['client_type']
-        services_config = request_data.get('services_config', {})
-        bid_id = request_data.get('bid_id')
+        # Check if this is a HubSpot webhook with deal_id
+        if 'deal_id' in request_data and isinstance(request_data['deal_id'], str):
+            print(f"Processing HubSpot webhook for deal_id: {request_data['deal_id']}")
+            # Fetch client info from HubSpot using deal_id
+            client_data = fetch_client_from_hubspot(request_data['deal_id'])
+            if not client_data:
+                return _create_error_response(400, f"Could not fetch client data for deal_id: {request_data['deal_id']}")
+            
+            # Extract components from HubSpot data
+            client_info = client_data['client_info']
+            client_type = client_data['client_type']
+            services_config = client_data.get('services_config', {})
+            bid_id = client_data.get('bid_id')
+        else:
+            # Legacy format with client_info directly provided
+            # Validate required fields
+            validation_error = _validate_onboard_request(request_data)
+            if validation_error:
+                return _create_error_response(400, validation_error)
+            
+            # Extract onboarding data
+            client_info = request_data['client_info']
+            client_type = request_data['client_type']
+            services_config = request_data.get('services_config', {})
+            bid_id = request_data.get('bid_id')
         
         print(f"Starting onboarding for {client_info['name']} - Type: {client_type}")
         
@@ -801,6 +821,93 @@ def _generate_404_page(client_info: Dict[str, Any]) -> str:
     <a href="/" class="btn">Return Home</a>
 </body>
 </html>"""
+
+
+def fetch_client_from_hubspot(deal_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch client information from HubSpot using deal_id.
+    
+    This function retrieves deal, contact, and company information from HubSpot
+    and maps it to the client_info format expected by the rest of the handler.
+    
+    Args:
+        deal_id: HubSpot deal ID to fetch data for
+        
+    Returns:
+        Dictionary with client_info, client_type, services_config, and bid_id
+        or None if fetch fails
+    """
+    try:
+        print(f"Fetching client data from HubSpot for deal_id: {deal_id}")
+        
+        # Get deal details from HubSpot with all properties
+        deal_properties = [
+            'dealname', 'dealstage', 'amount', 'client_business_name', 'client_type',
+            'client_website_domain', 'client_industry', 'services_required',
+            'setup_cost', 'monthly_cost', 'bid_id'
+        ]
+        deal_data = hubspot_client.get_deal_with_properties(deal_id, deal_properties)
+        if not deal_data:
+            print(f"ERROR: Could not fetch deal {deal_id} from HubSpot")
+            return None
+        
+        # Get associated contacts for this deal
+        contacts = hubspot_client.get_deal_contacts(deal_id)
+        primary_contact = contacts[0] if contacts else None
+        if not primary_contact:
+            print(f"ERROR: No contacts found for deal {deal_id}")
+            return None
+        
+        # Get associated companies for this deal
+        companies = hubspot_client.get_deal_companies(deal_id)
+        primary_company = companies[0] if companies else None
+        
+        # Extract deal properties
+        deal_props = deal_data.get('properties', {})
+        contact_props = primary_contact.get('properties', {})
+        company_props = primary_company.get('properties', {}) if primary_company else {}
+        
+        # Map HubSpot properties to client_info format
+        client_info = {
+            'name': contact_props.get('firstname', '') + ' ' + contact_props.get('lastname', ''),
+            'email': contact_props.get('email', ''),
+            'company': deal_props.get('client_business_name') or company_props.get('name', ''),
+            'phone': contact_props.get('phone', ''),
+            'industry': deal_props.get('client_industry', ''),
+            'address': contact_props.get('address', '') + ', ' + 
+                      contact_props.get('city', '') + ', ' + 
+                      contact_props.get('state', '') + ' ' + 
+                      contact_props.get('zip', '')
+        }
+        
+        # Determine client_type from HubSpot deal properties
+        client_type = deal_props.get('client_type', 'full_package')  # Default to full_package
+        if client_type not in CLIENT_TYPES:
+            print(f"WARNING: Invalid client_type '{client_type}' from HubSpot, defaulting to full_package")
+            client_type = 'full_package'
+        
+        # Build services_config from HubSpot properties
+        services_config = {
+            'domain': deal_props.get('client_website_domain', ''),
+            'setup_cost': float(deal_props.get('setup_cost', 0)) if deal_props.get('setup_cost') else 0,
+            'monthly_cost': float(deal_props.get('monthly_cost', 0)) if deal_props.get('monthly_cost') else 0,
+            'services_required': deal_props.get('services_required', '').split(',') if deal_props.get('services_required') else []
+        }
+        
+        # Get bid_id if available
+        bid_id = deal_props.get('bid_id')
+        
+        print(f"Successfully mapped HubSpot data for {client_info['company']}")
+        
+        return {
+            'client_info': client_info,
+            'client_type': client_type,
+            'services_config': services_config,
+            'bid_id': bid_id
+        }
+        
+    except Exception as e:
+        print(f"ERROR: Failed to fetch client data from HubSpot for deal {deal_id}: {e}")
+        return None
 
 
 def _create_error_response(status_code: int, error_message: str) -> Dict[str, Any]:

@@ -20,17 +20,13 @@ _HANDLER_ROUTE_SPECS: list[tuple[str, str]] = [
     ("invoice", "invoice"),  # Stripe invoice endpoint
     ("crm-setup", "crm_setup"),  # HubSpot CRM setup endpoint
     ("stripe-setup", "stripe_setup"),  # Stripe Connect setup endpoint
-    ("dns", "dns"),  # DNS automation endpoint
-    ("deploy", "deploy"),  # Website deploy orchestration endpoint
-    ("email-setup", "email_setup"),  # Email setup endpoint
+    ("email-setup", "email_setup"),  # Email setup endpoint (includes workspace logic)
     ("subscribe", "subscribe"),  # Subscription billing endpoint
     ("notify", "notify"),  # Notifications endpoint
     ("crm-import", "crm_import"),  # CRM CSV import endpoint
     ("onboard", "onboard"),  # Orchestrator endpoint
     ("chatbot", "chatbot"),  # AI chatbot endpoint
-    ("workspace", "workspace"),  # Google Workspace email setup endpoint
-    ("whatsapp", "whatsapp"),  # WhatsApp Business API endpoint
-    ("collaboration", "collaboration"),  # Slack/Teams integration endpoint
+    ("webhook/stripe", "webhook"),  # Stripe webhook endpoint
 ]
 
 
@@ -133,6 +129,14 @@ class ApiStack(Stack):
                 retention=logs.RetentionDays.ONE_MONTH,  # 30-day log retention for cost optimization
                 removal_policy=RemovalPolicy.DESTROY,  # Allow log group cleanup when stack is deleted
             )  # End log group definition
+            # Add webhook-specific environment variables for the webhook handler
+            function_environment = common_environment.copy()  # Start with shared environment
+            if module_suffix == "webhook":  # Webhook handler needs additional SSM parameters
+                function_environment.update({
+                    "STRIPE_WEBHOOK_SECRET_PARAM": "/dtl-global-platform/stripe/webhook_secret",  # Webhook secret SSM name
+                    "SLACK_WEBHOOK_URL_PARAM": "/dtl-global-platform/slack/webhook_url",  # Slack webhook URL SSM name
+                })
+            
             lambda_function = lambda_.Function(  # Python 3.12 function: app code zip + dependency layer
                 self,  # Parent construct is this stack
                 f"Lambda{module_suffix.title().replace('_', '')}",  # Stable logical id per handler
@@ -142,7 +146,7 @@ class ApiStack(Stack):
                 layers=[python_dependencies_layer],  # Third-party packages from cdk/lambda_layer requirements
                 timeout=Duration.minutes(5),  # Long-running onboarding steps (master plan: 5 minutes)
                 memory_size=256,  # Memory size per master plan baseline
-                environment=common_environment,  # Inject shared configuration
+                environment=function_environment,  # Inject configuration (shared + handler-specific)
                 function_name=function_name,  # Predictable name in the Lambda console
                 log_group=log_group,  # Use explicit log group instead of deprecated log_retention
             )  # End Lambda function definition
@@ -181,21 +185,15 @@ class ApiStack(Stack):
                         resources=[f"arn:aws:ses:{region}:{account}:identity/*"],  # Allow any verified identity in-region
                     ),  # End SES policy statement
                 )  # End SES add_to_role_policy
-            if module_suffix == "deploy":  # Website deploy handler creates CloudFront distributions
-                lambda_function.add_to_role_policy(  # Grant CloudFront creation permissions
-                    iam.PolicyStatement(  # CloudFront distribution + OAC permissions
-                        actions=[
-                            "cloudfront:CreateDistribution",  # Create distribution for client website
-                            "cloudfront:GetDistribution",  # Read distribution details after creation
-                            "cloudfront:ListDistributions",  # Allow list access for safe lookups
-                            "cloudfront:CreateOriginAccessControl",  # Create OAC for S3 origin security
-                            "cloudfront:GetOriginAccessControl",  # Read OAC details if needed
-                            "cloudfront:ListOriginAccessControls",  # Allow listing OAC resources
-                        ],  # CloudFront API actions used by handler_deploy
-                        resources=["*"],  # CloudFront create actions may require wildcard resource scoping
-                    ),  # End CloudFront policy statement
-                )  # End CloudFront add_to_role_policy
-            resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
+            # No CloudFront permissions needed - handler_deploy was removed in Phase 7
+            # Handle nested routes (e.g., webhook/stripe)
+            if route_path == "webhook/stripe":
+                # Create webhook resource if it doesn't exist
+                webhook_resource = rest_api.root.add_resource("webhook")
+                resource = webhook_resource.add_resource("stripe")
+            else:
+                resource = rest_api.root.add_resource(route_path)  # Add /{route_path} under root
+            
             resource.add_method(  # Wire POST to the Lambda integration
                 "POST",  # Onboarding actions are invoked via POST bodies
                 apigateway.LambdaIntegration(lambda_function),  # Lambda proxy integration

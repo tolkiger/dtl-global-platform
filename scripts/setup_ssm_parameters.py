@@ -43,6 +43,18 @@ _PARAMETER_CONFIG: list[dict[str, Any]] = [
         "use_getpass": False,  # ARN is not a short secret; show while typing for verification
         "require_sk_test_prefix": False,  # Not Stripe
     },
+    {
+        "name": "/dtl-global-platform/stripe/webhook_secret",  # SSM path for Stripe webhook signing secret
+        "label": "Stripe Webhook Signing Secret (whsec_...)",  # Human label for prompts
+        "use_getpass": True,  # Mask input because it is a secret
+        "require_sk_test_prefix": False,  # Not a Stripe API key
+    },
+    {
+        "name": "/dtl-global-platform/slack/webhook_url",  # SSM path for Slack incoming webhook URL
+        "label": "Slack Incoming Webhook URL",  # Human label for prompts
+        "use_getpass": True,  # Mask input because it contains sensitive URL
+        "require_sk_test_prefix": False,  # Not a Stripe key
+    },
 ]
 
 
