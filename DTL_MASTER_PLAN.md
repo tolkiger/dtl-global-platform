@@ -1,26 +1,29 @@
-# DTL-Global Platform — Master Build Plan v2.9.0
+# DTL-Global Platform — Master Build Plan v3.0.0
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-25 (v2.9.0 — Phase 4: pipeline-factory integration for automated website deployment)
-> **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform. Cursor MUST follow this plan exactly. Do not deviate, over-engineer, or add services not listed here.
+> **Updated:** 2026-03-26 (v3.0.0 — Phase 7: CRM Automation & Lifecycle Management)
+> **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform.
+> **AI Model for Implementation:** Claude Haiku 4 via Cursor.
 
 ---
 
 ## Changelog
 
 | Version | Changes |
-|---------|---------|
-| v2.9.0 | **Phase 4 pipeline-factory integration**: Client websites deployed by adding entries to existing `pipeline-factory` repo (tolkiger/pipeline-factory) via GitHub API. New script `scripts/deploy_client_website.py`. New SSM param `/dtl-global-platform/github/token`. Dry-run skips Route 53 creation. Stage 5.5 added to onboarding workflow. Updated dtl-workflow.md skill. |
-| v2.8.1 | **Lambda layer**: CDK only packages pre-built `cdk/lambda_layer/python/` (no Docker/SAM bundling fallback). Run `pip install -t` before synth/deploy locally; same in `buildspec.yml`. |
-| v2.8.0 | **Lambda layer for Python dependencies**: `cdk/lambda_layer/requirements.txt` + pre-built `python/` (CI/local); `engine/` slimmed to handlers, shared, templates only. CodeBuild runs `pip install -t` before `cdk deploy`. |
-| v2.7.0 | **Documentation sync**: Section 2 structure matches repo (four stacks, 16 Lambda handlers, seven shared modules). Stripe Phase 0 supports optional `DTL_STRIPE_ALLOW_LIVE=1` for live catalog seeding. |
-| v2.6.0 | Stripe live-mode support, Phase 0 Stripe scripts updated |
-| v2.5.0 | HubSpot developer platform 2025.2 project + static auth |
-| v2.4.1 | SSM parameter paths: /dtl-global-platform/{param} |
-| v2.4 | GitFlow Rule 012, SSM script, pricing tiers, MCP docs, Stripe sandbox |
-| v2.1 | Added Section 0: Project Bootstrap |
-| v2.0 | Repo rename, 100% serverless, MCP strategy, client types, CodeStar, CRM import |
+|---------|--------|
+| v3.0.0 | Phase 7 CRM Automation: 11 HubSpot workflows, 6 email sequences, Slack notifications, cold lead + churned win-back, Churned stage. Engine refactoring: removed 5 handlers, added handler_webhook.py. 12 Lambda handlers total. |
+| v2.9.0 | Phase 4 pipeline-factory integration, deploy_client_website.py |
+| v2.8.1 | Lambda layer: pre-built python/ only, no Docker |
+| v2.8.0 | Lambda layer for Python dependencies |
+| v2.7.0 | Documentation sync, 16 handlers, DTL_STRIPE_ALLOW_LIVE |
+| v2.6.0 | Stripe live-mode support |
+| v2.5.3 | Rule 013: Latest Constructs Only |
+| v2.5.2 | Cost optimization |
+| v2.5.0 | Phase 1 CDK: OAC, CodePipeline V2 |
+| v2.4.1 | SSM paths: /dtl-global-platform/ |
+| v2.4 | GitFlow, SSM script, pricing, MCP docs |
+| v2.0-2.3 | Bootstrap, serverless, HubSpot auth |
 | v1.0 | Initial plan |
 
 ---
@@ -29,808 +32,552 @@
 
 | Area | Status |
 |------|--------|
-| Bootstrap (Section 0) | Done |
-| HubSpot Phase 0 | Done — verify ALL CHECKS PASSED |
-| Stripe Phase 0 | Done — 9 products created (sandbox + live support) |
-| AWS SSM (Phase 0.5) | Done — 5 parameters created |
-| Phase 1 (CDK) | Done — 4 stacks deployed (storage, api, pipeline, infra) |
-| Phase 2 (Lambda) | Done — 16 handlers + 7 shared modules built |
-| Phase 3 (AI Layer) | Not started |
-| Phase 4 (Website Deploy) | In Progress — deploy script created and tested |
-| Phases 5-6 | Not started |
+| Bootstrap | COMPLETE |
+| Phase 0 (HubSpot + Stripe) | COMPLETE |
+| Phase 0.5 (SSM + GitFlow) | COMPLETE |
+| Phase 1 (CDK) | COMPLETE |
+| Phase 2 (Lambda) | COMPLETE — needs refactoring |
+| Phase 3 (AI) | COMPLETE |
+| Phase 4 (Website Deploy) | COMPLETE |
+| Phase 5 (Add-Ons) | COMPLETE |
+| Phase 6 (E2E Testing) | COMPLETE |
+| **Phase 7 (CRM Automation)** | **NOT STARTED** |
 
 ---
 
-## Table of Contents
+## 1. Cursor Rules (13 Rules)
 
-0. [Project Bootstrap](#0-project-bootstrap)
-1. [Cursor Rules and Coding Standards](#1-cursor-rules-and-coding-standards)
-2. [Project Structure](#2-project-structure)
-3. [Approved AWS Services](#3-approved-aws-services)
-4. [Approved External APIs](#4-approved-external-apis)
-5. [MCP vs Python SDK Decision](#5-mcp-vs-python-sdk-decision)
-6. [Client Types and Service Packages](#6-client-types-and-service-packages)
-7. [Phase 0: Setup HubSpot and Stripe](#7-phase-0-setup-hubspot-and-stripe)
-8. [Phase 0.5: SSM Parameters and GitFlow Setup](#8-phase-05-ssm-parameters-and-gitflow-setup)
-9. [Phase 1: Foundation CDK Infrastructure](#9-phase-1-foundation-cdk-infrastructure)
-10. [Phase 2: Onboarding Engine Lambda Functions](#10-phase-2-onboarding-engine-lambda-functions)
-11. [Phase 3: AI Layer](#11-phase-3-ai-layer)
-12. [Phase 4: Client Website Deployment Automation](#12-phase-4-client-website-deployment-automation)
-13. [Phase 5: Add-On Modules](#13-phase-5-add-on-modules)
-14. [Phase 6: End-to-End Testing](#14-phase-6-end-to-end-testing)
-15. [Industry Templates Schema](#15-industry-templates-schema)
-16. [DTL-Global HubSpot Pipeline Definition](#16-dtl-global-hubspot-pipeline-definition)
-17. [SEO Prompt Template](#17-seo-prompt-template)
-18. [Pricing Formula](#18-pricing-formula)
-19. [CRM Data Import Specification](#19-crm-data-import-specification)
-20. [GitFlow Workflow](#20-gitflow-workflow)
-21. [Phase Gate Checklist](#21-phase-gate-checklist)
+| Rule | Name | Enforces |
+|------|------|----------|
+| 001 | Google Docstring | Google-style docstrings |
+| 002 | Comment Every Line | Inline comments |
+| 003 | No Over-Engineering | Only approved AWS services |
+| 004 | Clean Up Files | Delete temp files |
+| 005 | Python Only | Python 3.12+ |
+| 006 | Do Not Deviate | Check plan first |
+| 007 | Phase Gates | Complete phase before next |
+| 008 | File Naming | snake_case |
+| 009 | Error Handling | try/except on API calls |
+| 010 | Secrets | SSM Parameter Store |
+| 011 | Serverless | No EC2, no containers |
+| 012 | GitFlow | Feature branches, PRs |
+| 013 | Latest Constructs | No deprecated CDK |
 
 ---
 
-## 0. Project Bootstrap
-
-### 0.0 Purpose
-
-Cursor sets up the entire project structure, rules, skills, and configuration files BEFORE any development begins. Status: DONE.
-
-### 0.1 What Was Created
-
-- .cursor/rules/dtl-global.mdc (12 rules)
-- .cursor/skills/ (phase-management, code-generation, dtl-workflow, gitflow)
-- docs/AUTHENTICATION.md (HubSpot + Stripe + MCP setup guide)
-- .gitignore, .env.example, README.md
-- engine/__init__.py files
-- All directory structure
-
-### 0.2 MCP Setup
-
-MCP servers are NOT configured via .cursor/mcp.json:
-- Stripe MCP: Cursor native integration (Settings > MCP)
-- HubSpot MCP: hubspotcli (hs mcp enable)
-- See docs/AUTHENTICATION.md for setup instructions
-
----
-
-## 1. Cursor Rules and Coding Standards
-
-### 1.1 Summary of 12 Rules
-
-| Rule | Name | What It Enforces |
-|------|------|-----------------|
-| 001 | Google Docstring Format | All functions/classes use Google-style docstrings |
-| 002 | Comment Every Line | Inline comments on every meaningful line |
-| 003 | No Over-Engineering | Only approved AWS services, no extras |
-| 004 | Clean Up Obsolete Files | Delete temp/scratch files after each phase |
-| 005 | Python Only | Python 3.12+ for everything |
-| 006 | Do Not Deviate | Check plan before creating anything new |
-| 007 | Phase Gate Enforcement | Complete current phase before starting next |
-| 008 | File Naming | snake_case, handler_ prefix, _stack suffix |
-| 009 | Error Handling | try/except on all API calls |
-| 010 | Secrets Management | SSM Parameter Store (/dtl-global-platform/), never hardcode |
-| 011 | 100% Serverless | No EC2, no containers, no always-on compute |
-| 012 | GitFlow | Feature branches, issues, PRs, non-interactive CLI |
-
-### 1.2 Cursor Skills
-
-| Skill File | Purpose |
-|-----------|---------|
-| phase-management.md | Tracks phases, enforces gates, reports status |
-| code-generation.md | Code structure template, docstring examples, checklist |
-| dtl-workflow.md | The 8-stage pipeline + Stage 5.5, client types, integration points |
-| gitflow.md | GitFlow commands, branch naming, PR creation |
-
----
-
-## 2. Project Structure
+## 2. Project Structure (v3.0.0)
 
 ```
 dtl-global-platform/
 +-- DTL_MASTER_PLAN.md
-+-- README.md
-+-- .gitignore
-+-- .env.example
-+-- requirements.txt                    # Local dev/testing dependencies
-+-- .cursor/
-|   +-- rules/dtl-global.mdc
-|   +-- skills/ (4 files)
-+-- docs/
-|   +-- AUTHENTICATION.md
++-- README.md, .gitignore, .env.example, requirements.txt
++-- .cursor/rules/dtl-global.mdc
++-- .cursor/skills/ (4 files)
++-- docs/AUTHENTICATION.md
++-- config/
+|   +-- hubspot_automations.yaml       # NEW: CRM workflow definitions
 +-- scripts/
 |   +-- phase0_hubspot_setup.py
-|   +-- phase0_hubspot_verify.py
-|   +-- phase0_stripe_setup.py          (sandbox + live support)
-|   +-- phase0_stripe_verify.py
-|   +-- setup_ssm_parameters.py
-|   +-- verify_ssm_parameters.py
-|   +-- deploy_client_website.py        (Phase 4: pipeline-factory integration)
-|   +-- seed_templates.py
-+-- cdk/
-|   +-- app.py
-|   +-- cdk.json
-|   +-- requirements.txt
-|   +-- buildspec.yml
-|   +-- lambda_layer/
-|   |   +-- requirements.txt            # Lambda layer dependencies
-|   |   +-- python/                     # Pre-built layer (pip install -t)
-|   +-- stacks/
-|       +-- api_stack.py                # API Gateway + 16 Lambda functions
-|       +-- storage_stack.py            # DynamoDB (3 tables) + S3 (3 buckets)
-|       +-- pipeline_stack.py           # CodePipeline (existing CodeStar)
-|       +-- infra_stack.py              # SES, Route 53, ACM base config
-+-- engine/                             # Lambda deployment asset root
-|   +-- shared/
-|   |   +-- __init__.py
-|   |   +-- config.py
-|   |   +-- hubspot_client.py
-|   |   +-- stripe_client.py
-|   |   +-- ai_client.py
-|   |   +-- ses_client.py
-|   |   +-- route53_client.py
-|   |   +-- s3_client.py
-|   +-- handlers/
-|   |   +-- __init__.py
-|   |   +-- handler_onboard.py          # Main orchestrator (client_type aware)
-|   |   +-- handler_bid.py
-|   |   +-- handler_prompt.py           # SEO-optimized
-|   |   +-- handler_invoice.py
-|   |   +-- handler_deploy.py
-|   |   +-- handler_dns.py
-|   |   +-- handler_crm_setup.py
-|   |   +-- handler_stripe_setup.py
-|   |   +-- handler_email_setup.py
-|   |   +-- handler_subscribe.py
-|   |   +-- handler_notify.py
-|   |   +-- handler_crm_import.py
-|   |   +-- handler_chatbot.py
-|   |   +-- handler_workspace.py
-|   |   +-- handler_whatsapp.py
-|   |   +-- handler_collaboration.py
-|   +-- templates/
-|       +-- roofing_template.json
-|       +-- accounting_template.json
-|       +-- remodeling_template.json
-|       +-- auto_restoration_template.json
-|       +-- general_template.json
+|   +-- phase0_stripe_setup.py
+|   +-- setup_ssm_parameters.py        # UPDATED: 8 params
+|   +-- deploy_client_website.py
+|   +-- setup_hubspot_automations.py   # NEW
++-- cdk/stacks/
+|   +-- api_stack.py                   # UPDATED: 12 routes
+|   +-- storage_stack.py, cdn_stack.py, pipeline_stack.py
++-- engine/
+|   +-- shared/ (7 modules: config, hubspot, stripe, ai, ses, route53, s3)
+|   +-- handlers/ (12 handlers — see Section 10)
+|   +-- templates/ (industry JSON)
 +-- tests/
-|   +-- test_phase0_hubspot.py
-|   +-- test_phase0_stripe.py
-|   +-- test_hubspot_client.py
-|   +-- test_stripe_client.py
-|   +-- test_ai_client.py
-|   +-- test_handler_onboard.py
-|   +-- test_handler_bid.py
-|   +-- test_handler_crm_import.py
-|   +-- test_deploy_client_website.py   # Phase 4 tests
-+-- client-sites/
-    +-- .gitkeep
 ```
+
+### 2.1 Files REMOVED in v3.0.0
+
+| Deleted | Reason | Replacement |
+|---------|--------|-------------|
+| handler_deploy.py | Redundant | scripts/deploy_client_website.py |
+| handler_dns.py | Redundant | deploy_client_website.py handles Route 53 |
+| handler_workspace.py | Merged | handler_email_setup.py |
+| handler_whatsapp.py | Premature | Future Phase 8+ |
+| handler_collaboration.py | Premature | Future Phase 8+ |
+
+### 2.2 Files ADDED in v3.0.0
+
+| New File | Purpose |
+|----------|--------|
+| config/hubspot_automations.yaml | CRM workflow definitions |
+| scripts/setup_hubspot_automations.py | Creates HubSpot workflows from YAML |
+| engine/handlers/handler_webhook.py | Stripe webhook receiver |
+| tests/test_handler_webhook.py | Webhook handler tests |
 
 ---
 
 ## 3. Approved AWS Services
 
-100% SERVERLESS. ONLY these services.
+100% SERVERLESS. Same as v2.9.0. Lambda, API Gateway, DynamoDB, S3, CloudFront, Route 53, ACM, SES, SSM, CodePipeline, CodeBuild, CloudWatch Logs.
 
-| Service | Purpose | Free Tier |
-|---------|---------|-----------|
-| Lambda | All compute (Python 3.12) | 1M req/month |
-| API Gateway (REST) | HTTP endpoints | 1M calls/month (12 mo) |
-| DynamoDB | Data storage | 25GB |
-| S3 | Websites, assets, CSV imports | 5GB (12 mo) |
-| CloudFront | CDN | 1TB/month (12 mo) |
-| Route 53 | DNS | $0.50/zone + $14/domain |
-| ACM | SSL certificates | Free |
-| SES | Emails | Free from Lambda |
-| SSM Parameter Store | Secrets | Free (standard) |
-| CodePipeline | CI/CD | $1/pipeline/month |
-| CodeBuild | Build step | 100 min/month free |
-| CloudWatch Logs | Lambda logs (auto) | 5GB free |
-
-NOT ALLOWED: EC2, ECS, EKS, Fargate, Amplify, AppSync, Cognito, Step Functions, EventBridge, SQS, SNS, RDS, Aurora, ElastiCache, any monitoring tools.
+NOT ALLOWED: EC2, ECS, EKS, Fargate, Amplify, AppSync, Cognito, Step Functions, EventBridge, SQS, SNS, RDS, Aurora, ElastiCache.
 
 ---
 
 ## 4. Approved External APIs
 
-| API | Purpose | Auth | Mode |
-|-----|---------|------|------|
-| HubSpot CRM API | CRM management | Private App Token | Production |
-| Stripe API | Payments, invoicing | Secret Key | Sandbox (live via DTL_STRIPE_ALLOW_LIVE=1) |
-| Stripe Connect | Client payment accounts | OAuth + Platform | Sandbox until launch |
-| Anthropic Claude (Direct) | AI features | API Key | Production |
-| GitHub API | Pipeline-factory integration | Personal Access Token | Production |
-| Google Workspace Admin | Email (future) | OAuth 2.0 | Future |
+| API | Purpose | Auth |
+|-----|---------|------|
+| HubSpot CRM API | CRM + workflows + email | Private App Token |
+| Stripe API | Payments | Secret Key |
+| Stripe Connect | Client payment accounts | OAuth |
+| Anthropic Claude | AI features | API Key |
+| GitHub API | Pipeline-factory | PAT |
+| Slack Incoming Webhooks | Notifications (NEW) | Webhook URL |
+| Google Workspace Admin | Email (future) | OAuth 2.0 |
 
 ---
 
-## 5. MCP vs Python SDK Decision
+## 5-6. MCP Decision, Client Types, Packages
 
-MCP Servers (Cursor IDE only):
-- Stripe: Cursor native integration
-- HubSpot: hubspotcli (hs mcp enable)
-- Use for: exploring APIs, verifying data
-
-Python SDKs (Production):
-- stripe and hubspot-api-client packages
-- Use for: all code, scripts, Lambda functions
+Same as v2.9.0. 4 client types, 9 Stripe products.
 
 ---
 
-## 6. Client Types and Service Packages
+## 7-14. Phases 0 through 6
 
-### 6.1 Client Types
-
-TYPE A: FULL PACKAGE — DNS, Website Deploy, CRM, Stripe, Email, Notify
-TYPE B: WEBSITE + EMAIL ONLY — DNS, Website Deploy, Email(if requested), Notify
-TYPE C: WEBSITE + CRM — DNS, Website Deploy, CRM, Notify
-TYPE D: CRM + PAYMENTS ONLY — CRM, Stripe, Notify
-
-### 6.2 Service Packages
-
-FRIENDS AND FAMILY: $0 setup / $20 monthly
-  Website hosting and basic maintenance only.
-
-STARTER: $500 setup / $49 monthly
-  Website + hosting + SEO. Optional custom email (+$100 setup).
-
-GROWTH: $1,250 setup / $149 monthly
-  Everything in Starter + HubSpot CRM + Stripe + custom email.
-
-PROFESSIONAL: $2,500 setup / $249 monthly
-  Everything in Growth + AI chatbot + CRM import + priority support.
-
-PREMIUM: $4,000+ setup / $399+ monthly
-  Everything in Professional + bots + custom automations.
-
-### 6.3 Stripe Products (9 total)
-
-One-Time Setup:
-  DTL Starter Setup: $500
-  DTL Growth Setup: $1,250
-  DTL Professional Setup: $2,500
-  DTL Premium Setup: $4,000
-
-Monthly Subscriptions:
-  DTL Friends and Family Hosting: $20/month
-  DTL Starter Monthly: $49/month
-  DTL Growth Monthly: $149/month
-  DTL Professional Monthly: $249/month
-  DTL Premium Monthly: $399/month
+All COMPLETE. See v2.9.0 for details.
 
 ---
 
-## 7. Phase 0: Setup HubSpot and Stripe
+## 10. Phase 2: Lambda Functions (Refactored in v3.0.0)
 
-Status: DONE
+### 10.1 Final Handler List (12 handlers)
 
-HubSpot: Pipeline "DTL-Global Client Onboarding" with 10 stages. All custom deal and contact properties created. Verification passed.
-
-Stripe: 9 products created in sandbox. Live mode supported via DTL_STRIPE_ALLOW_LIVE=1 flag.
-
----
-
-## 8. Phase 0.5: SSM Parameters and GitFlow Setup
-
-Status: DONE
-
-### 8.1 SSM Parameters (6 total)
-
-    /dtl-global-platform/hubspot/token                  — HubSpot Private App token
-    /dtl-global-platform/stripe/secret                  — Stripe Secret Key
-    /dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID
-    /dtl-global-platform/anthropic/api_key              — Anthropic Claude API key
-    /dtl-global-platform/github/codestar_connection_arn — Existing CodeStar connection ARN
-    /dtl-global-platform/github/token                   — GitHub PAT (repo scope for pipeline-factory)
-
-All stored as SecureString. Created via scripts/setup_ssm_parameters.py.
-
-### 8.2 GitFlow
-
-GitHub Project "DTL-Global Platform" created. All phases use feature branches, issues, and PRs.
+| Handler | Endpoint | Purpose |
+|---------|----------|--------|
+| handler_onboard.py | POST /onboard | Main orchestrator (UPDATED: accepts deal_id) |
+| handler_bid.py | POST /bid | AI bid generation |
+| handler_prompt.py | POST /prompt | AI website prompt |
+| handler_invoice.py | POST /invoice | Stripe invoicing |
+| handler_crm_setup.py | POST /crm-setup | Client HubSpot setup |
+| handler_stripe_setup.py | POST /stripe-setup | Client Stripe Connect |
+| handler_email_setup.py | POST /email-setup | Custom email DNS (merged workspace) |
+| handler_subscribe.py | POST /subscribe | Monthly subscriptions |
+| handler_notify.py | POST /notify | Email notifications |
+| handler_crm_import.py | POST /crm-import | CSV CRM import |
+| handler_chatbot.py | POST /chatbot | AI chatbot |
+| handler_webhook.py | POST /webhook/stripe | Stripe events (NEW) |
 
 ---
 
-## 9. Phase 1: Foundation CDK Infrastructure
+## 15. Phase 7: CRM Automation and Lifecycle Management
 
-Status: DONE
+### 15.0 Purpose
 
-### 9.1 What Was Deployed
+Transform HubSpot from a passive data store into an active automation engine.
 
-4 CDK stacks:
-- storage_stack.py: 3 DynamoDB tables + 3 S3 buckets
-- api_stack.py: API Gateway (16 endpoints) + 16 Lambda functions
-- pipeline_stack.py: CodePipeline using existing CodeStar connection
-- infra_stack.py: SES, Route 53, ACM base config
+### 15.1 Prerequisites
 
-### 9.2 Lambda Layer
+- HubSpot Starter plan ($20/month) — CONFIRMED
+- Slack workspace (free plan sufficient)
+- Slack Incoming Webhook URL (see setup below)
+- Lambda functions working (fix packaging first)
+- API Gateway URL known
 
-Dependencies managed via cdk/lambda_layer/:
-- requirements.txt defines packages
-- python/ directory contains pre-built packages
-- CDK packages the python/ directory as a Lambda layer
-- No Docker bundling — pip install -t before synth/deploy
-- CodeBuild buildspec.yml runs pip install -t before cdk deploy
+#### Slack Webhook Setup
 
----
+1. Go to api.slack.com/apps
+2. Create New App > From Scratch > Name: DTL-Global Notifications
+3. Incoming Webhooks > Activate > Add New Webhook > Select #dtl-notifications
+4. Copy URL, store in .env as SLACK_WEBHOOK_URL
+5. Store in SSM: /dtl-global-platform/slack/webhook_url
 
-## 10. Phase 2: Onboarding Engine Lambda Functions
+### 15.2 Pipeline Update
 
-Status: DONE
+Add stage 11: **Churned** (displayOrder: 10)
+Purpose: Client was active but cancelled subscription.
 
-### 10.1 Built (19 steps completed)
+### 15.3 Deal Stage Workflows (11 Workflows)
 
-7 shared modules: config, hubspot_client, stripe_client, ai_client, ses_client, route53_client, s3_client
+#### Workflow 1: New Lead
 
-16 handlers: onboard, bid, prompt, invoice, deploy, dns, crm_setup, stripe_setup, email_setup, subscribe, notify, crm_import, chatbot, workspace, whatsapp, collaboration
+Trigger: Deal moved to "New Lead"
 
-### 10.2 Client Type Logic
+Actions:
+- Create task: 'Initial contact with {client_name}' (due: today, HIGH)
+- Slack: 'New Lead: {name} ({industry})'
+- Send email: new_lead_welcome
+
+#### Workflow 2: Discovery
+
+Trigger: Deal moved to "Discovery"
+
+Actions:
+- Create task: 'Schedule discovery meeting' (due: +1 day)
+- Send email: discovery_scheduled
+- Set property: discovery_date = today
+
+#### Workflow 3: Proposal & Bid
+
+Trigger: Deal moved to "Proposal & Bid"
+
+Actions:
+- Webhook POST /bid with deal_id (AI bid generation)
+- Create task: 'Review AI bid and send proposal' (due: +2 days, HIGH)
+- Send email: proposal_preparing
+- Slack: 'Proposal stage: {name}'
+
+#### Workflow 4: Contract & Deposit
+
+Trigger: Deal moved to "Contract & Deposit"
+
+Actions:
+- Webhook POST /invoice with deal_id + invoice_type=deposit + percentage=50
+- Send email: deposit_invoice_sent
+- Create task: 'Follow up on deposit' (due: +3 days, HIGH)
+- Slack: 'Deposit invoice sent: {name} - ${amount}'
+
+#### Workflow 5: Build Website
+
+Trigger: Deal moved to "Build Website"
+
+Actions:
+- Webhook POST /prompt with deal_id (generate Rocket.new prompt)
+- Create task: 'Build website in Rocket.new' (due: +5 days, HIGH)
+- Send email: website_building
+
+#### Workflow 6: Deploy & Connect
+
+Trigger: Deal moved to "Deploy & Connect"
+
+Actions:
+- Webhook POST /onboard with deal_id (full deployment)
+- Create task: 'Verify deployment' (due: +1 day, HIGH)
+- Send email: systems_deploying
+- Slack: 'Deploying: {name}'
+
+#### Workflow 7: Final Payment
+
+Trigger: Deal moved to "Final Payment"
+
+Actions:
+- Webhook POST /invoice with deal_id + invoice_type=final + percentage=50
+- Send email: final_invoice_sent
+- Create task: 'Follow up on final payment' (due: +3 days, HIGH)
+
+#### Workflow 8: Live & Monthly
+
+Trigger: Deal moved to "Live & Monthly"
+
+Actions:
+- Webhook POST /subscribe with deal_id (create subscription)
+- Send email: welcome_live (all login details)
+- Create task: '30-day check-in' (due: +30 days, LOW)
+- Set contact lifecycle = customer
+- Slack: 'CLIENT LIVE: {name} at https://{domain}'
+- Enroll in sequence: post_onboarding_care
+
+#### Workflow 9: Nurture
+
+Trigger: Deal moved to "Nurture"
+
+Actions:
+- Enroll in sequence: cold_lead_nurture
+- Create task: 'Follow up' (due: +30 days, LOW)
+- Set property: nurture_start_date = today
+
+#### Workflow 10: Lost
+
+Trigger: Deal moved to "Lost"
+
+Actions:
+- Send email: deal_lost_feedback (delay: 1 day)
+- Create task: 'Log lost reason' (due: today, MEDIUM)
+- Set property: lost_date = today
+- Slack: 'Deal LOST: {name}'
+
+#### Workflow 11: Churned
+
+Trigger: Deal moved to "Churned"
+
+Actions:
+- Enroll in sequence: churned_winback
+- Send email: churned_sorry
+- Create task: 'Call to understand churn reason' (due: +1 day, HIGH)
+- Slack: 'CLIENT CHURNED: {name}'
+
+### 15.4 Email Sequences (6 Sequences, ~25 Templates)
+
+#### Sequence 1: New Lead Welcome (4 emails)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 0 | new_lead_welcome | Welcome to DTL-Global |
+| Day 2 | new_lead_value | How We Help {industry} Businesses |
+| Day 5 | new_lead_schedule | Ready to Chat? Schedule a Call |
+| Day 10 | new_lead_last_chance | Last Chance — Special Offer |
+
+#### Sequence 2: Proposal Follow-Up (4 emails)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 0 | proposal_sent | Your Custom Proposal |
+| Day 3 | proposal_questions | Any Questions? |
+| Day 7 | proposal_expiring | Proposal Expires in 7 Days |
+| Day 14 | proposal_final | Let's Chat |
+
+#### Sequence 3: Onboarding Updates (5 emails)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 0 | deposit_received | Payment Received — Getting Started! |
+| Day 3 | website_preview_coming | Preview Coming Soon |
+| Day 7 | website_ready_review | Website Ready for Review! |
+| Day 10 | systems_deploying | Systems Being Deployed |
+| Day 14 | everything_live | Everything is Live — Welcome Guide |
+
+#### Sequence 4: Cold Lead Nurture (10 emails over 12 months)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 0 | nurture_no_worries | No Worries — We'll Be Here |
+| Day 30 | nurture_tip | Quick Tip for {industry} Businesses |
+| Day 45 | nurture_case_study | How a {industry} Company Doubled Leads |
+| Day 60 | nurture_new_feature | New Feature Alert |
+| Day 90 | nurture_checkin | Checking In — Anything Changed? |
+| Day 120 | nurture_competitor | Your Competitors Are Going Digital |
+| Day 150 | nurture_seasonal | {Season} is Peak Season |
+| Day 180 | nurture_6month | 6-Month Special: 15% Off |
+| Day 270 | nurture_endofyear | End of Year: 20% Off |
+| Day 365 | nurture_final | One Last Offer Before We Close Your File |
+
+#### Sequence 5: Post-Onboarding Care (4 emails)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 7 | care_first_week | How's Your First Week? |
+| Day 30 | care_30day | First Month Check-In |
+| Day 60 | care_feature_tip | Did You Know About This Feature? |
+| Day 90 | care_quarterly | Quarterly Review — Let's Optimize |
+
+#### Sequence 6: Churned Win-Back (8 emails over 6 months)
+
+| Timing | Template | Subject |
+|--------|----------|--------|
+| Day 0 | churned_sorry | We're Sorry to See You Go |
+| Day 7 | churned_improvements | We've Made Improvements |
+| Day 14 | churned_free_trial | 30 Days Free on Us |
+| Day 30 | churned_website_warning | Your Website Needs Attention |
+| Day 45 | churned_success_story | See What Others Achieved |
+| Day 60 | churned_discount | 50% Off First 3 Months |
+| Day 120 | churned_industry | {Industry} Trends You Should Know |
+| Day 180 | churned_final | Final Offer: Original Rate Locked In |
+
+### 15.5 Slack Notifications
+
+| Event | Message |
+|-------|--------|
+| New Lead | New Lead: {name} ({industry}) |
+| Deposit paid | Payment: {name} - ${amount} |
+| Deploy triggered | Deploying: {name} |
+| Client live | CLIENT LIVE: {name} at https://{domain} |
+| Deal lost | Deal LOST: {name} |
+| Client churned | CLIENT CHURNED: {name} |
+| Task overdue 3+ days | OVERDUE: {task} - {days} days |
+
+### 15.6 handler_webhook.py (NEW Lambda)
+
+Endpoint: POST /webhook/stripe
+
+Events handled:
+
+**invoice.paid:**
+1. Extract customer_id from Stripe event
+2. Look up client in DynamoDB by stripe_customer_id
+3. Get current HubSpot deal stage
+4. If 'Contract & Deposit' -> move to 'Build Website'
+5. If 'Final Payment' -> move to 'Live & Monthly'
+6. Slack notification: 'Payment received: {name}'
+
+**customer.subscription.deleted:**
+1. Extract customer_id
+2. Look up client in DynamoDB
+3. Move HubSpot deal to 'Churned'
+4. Slack: 'CLIENT CHURNED: {name}'
+
+**Security:** Validate Stripe webhook signature using STRIPE_WEBHOOK_SECRET from SSM.
+
+**New SSM parameter:** /dtl-global-platform/stripe/webhook_secret
+
+### 15.7 Updated handler_onboard.py
+
+CURRENT: Input requires full client JSON
+UPDATED: Accepts deal_id, fetches all info from HubSpot
 
 ```python
-CLIENT_TYPES = {
-    "full_package": ["dns", "website", "crm", "stripe", "email", "notify"],
-    "website_only": ["dns", "website", "email_optional", "notify"],
-    "website_crm": ["dns", "website", "crm", "notify"],
-    "crm_payments": ["crm", "stripe", "notify"]
-}
+# New flow:
+# 1. Receive { 'deal_id': '12345' } from HubSpot webhook
+# 2. GET /crm/v3/objects/deals/{deal_id} with all properties
+# 3. Fetch associated contact (email, name, phone)
+# 4. Fetch associated company (business name)
+# 5. Build client_info dict from HubSpot data
+# 6. Proceed with existing onboarding logic
+#
+# Backward compatible:
+#   if 'deal_id' in body: fetch from HubSpot
+#   elif 'client_info' in body: use provided data (legacy)
 ```
 
----
+### 15.8 Updated api_stack.py
 
-## 11. Phase 3: AI Layer
+REMOVE 5 routes: /deploy, /dns, /workspace, /whatsapp, /collaboration
+ADD 1 route: POST /webhook/stripe -> handler_webhook
+FINAL: 12 routes
 
-Status: NOT STARTED
+### 15.9 Recurring Tasks (After Client is Live)
 
-Model: Claude Haiku 4.5 (direct Anthropic API, key from /dtl-global-platform/anthropic/api_key)
+| Task | Frequency | Due |
+|------|-----------|-----|
+| Monthly check-in | 30 days | +30 days from Live |
+| Quarterly review | 90 days | +90 days from Live |
+| Annual renewal | Yearly | +11 months from start |
+| Content review | 60 days | +60 days from Live |
 
-Features to build:
-- Bid generation (pricing JSON with guardrails)
-- SEO website prompts (Rocket.new prompts)
-- Custom request estimation (hours, cost, complexity)
-- Template customization (per client)
-- CRM column mapping (CSV import assistance)
+### 15.10 Phase 7 Build Order (Cursor follows this EXACTLY)
 
-### Phase 3 Gate
+Step 1: Add 'Churned' stage to HubSpot pipeline (scripts/setup_hubspot_automations.py)
+Step 2: Create config/hubspot_automations.yaml with all workflow definitions
+Step 3: Delete 5 redundant handlers: handler_deploy.py, handler_dns.py, handler_workspace.py, handler_whatsapp.py, handler_collaboration.py
+Step 4: Update cdk/stacks/api_stack.py: remove 5 routes, add POST /webhook/stripe
+Step 5: Create engine/handlers/handler_webhook.py (Stripe events)
+Step 6: Update engine/handlers/handler_onboard.py (accept deal_id from webhook)
+Step 7: Update engine/handlers/handler_email_setup.py (merge workspace logic)
+Step 8: Update engine/shared/config.py (add SLACK_WEBHOOK_URL, STRIPE_WEBHOOK_SECRET)
+Step 9: Update scripts/setup_ssm_parameters.py (add 2 new params: slack/webhook_url, stripe/webhook_secret)
+Step 10: Create scripts/setup_hubspot_automations.py (reads YAML, creates workflows)
+Step 11: Create 25 email templates in HubSpot via setup script
+Step 12: Create 11 workflows in HubSpot via setup script
+Step 13: Set up Stripe webhook in Dashboard: URL = {api-gw}/prod/webhook/stripe, events: invoice.paid, customer.subscription.deleted
+Step 14: Set up HubSpot Slack integration
+Step 15: Create tests: test_handler_webhook.py, test_hubspot_automations.py
+Step 16: Deploy: cdk deploy --all
+Step 17: Test full lifecycle: create deal -> move through all stages -> verify automations
 
-```
-[ ] GitHub Issue + feature branch
-[ ] Bid generation works for 3+ industries
-[ ] Website prompt includes all SEO elements
-[ ] Custom request estimation returns structured JSON
-[ ] AI costs under $0.05 for 10 test calls
-[ ] PR merged to main
-```
+### 15.11 Phase 7 Gate Checklist
 
----
-
-## 12. Phase 4: Client Website Deployment Automation
-
-Status: IN PROGRESS — deploy script created and tested
-
-### 12.1 Strategy: Reuse Existing Pipeline-Factory
-
-Client websites are deployed using the EXISTING `pipeline-factory` repo
-(github.com/tolkiger/pipeline-factory), NOT by rebuilding infrastructure
-inside dtl-global-platform. This is the same proven pattern used for
-dtl-global.org and lostuleskc.com.
-
-The pipeline-factory is a CDK app that reads `config/websites.json` and
-creates one WebsitePipelineStack per entry. Each stack provisions:
-- S3 bucket (static website hosting)
-- CloudFront distribution (CDN)
-- ACM SSL certificate
-- Route 53 DNS records
-- CodePipeline (GitHub push triggers auto-deploy to S3)
-
-When a new client entry is added to `websites.json` and committed,
-pipeline-factory's own CodePipeline triggers `cdk deploy`, which
-provisions all infrastructure for that client's website automatically.
-
-### 12.2 Architecture
-
-```
-DTL-GLOBAL-PLATFORM (this repo)          PIPELINE-FACTORY (existing repo)
-Cursor triggers onboarding               config/websites.json
-
-scripts/deploy_client_website.py         Each entry creates:
-    |                                      - S3 bucket
-    | 1. Read client info from             - CloudFront distribution
-    |    CLI args (Cursor provides)        - ACM SSL certificate
-    | 2. Get or create Route 53            - Route 53 DNS records
-    |    hosted zone for domain            - CodePipeline (auto-deploy)
-    | 3. GitHub API: read websites.json
-    |    from pipeline-factory repo
-    | 4. Check for duplicates
-    | 5. Add new client entry
-    | 6. GitHub API: commit change
-    | 7. Pipeline-factory CodePipeline
-    |    auto-triggers cdk deploy
-    | 8. Update HubSpot deal status
-    |
-    v
-Client gets:                             Future pushes to client repo
-  - Live website at custom domain          auto-deploy via their own
-  - SSL certificate (ACM)                  CodePipeline (no manual work)
-  - CDN (CloudFront)
-  - Auto-deploy pipeline
-```
-
-### 12.3 The Deployment Script
-
-File: scripts/deploy_client_website.py
-
-Triggered by Cursor during the onboarding workflow (dtl-workflow skill).
-Runs locally in Cursor's terminal.
-
-```
-Usage:
-  python scripts/deploy_client_website.py \
-    --client-name "Smith Roofing" \
-    --github-repo "dtl-client-smith-roofing" \
-    --domain "smithroofing.com" \
-    [--hosted-zone-id "Z0XXXXXXXXX"] \
-    [--hosted-zone-name "smithroofing.com"] \
-    [--dry-run]
-
-Flow:
-  1. Parse CLI arguments and validate inputs
-  2. If --dry-run and no --hosted-zone-id: skip Route 53 (use placeholder)
-     If not dry-run: get or create Route 53 hosted zone
-  3. GitHub API: GET config/websites.json from tolkiger/pipeline-factory
-  4. Check for duplicate (by siteName or domainName)
-  5. Add new entry to websites[] array
-  6. If --dry-run: print entry and exit (no commit)
-  7. GitHub API: PUT updated websites.json (commit to main)
-  8. Update HubSpot deal (if token available)
-  9. Print summary with website URL and next steps
-
-Prerequisites:
-  - Client website repo exists on GitHub
-  - GITHUB_TOKEN in .env (repo scope for pipeline-factory)
-  - Domain registered or NS records pointed to Route 53
-```
-
-### 12.4 Pipeline-Factory Config Reference
-
-```json
-{
-  "connectionArn": "arn:aws:codestar-connections:us-east-1:485815740327:connection/8a0201d7-d2cc-4095-b1a1-80556b74c395",
-  "githubOwner": "tolkiger",
-  "defaultRegion": "us-east-1",
-  "defaultAccount": "485815740327",
-  "notificationEmail": "admin@dtl-global.org",
-  "websites": [
-    {
-      "siteName": "example-website",
-      "githubRepo": "dtl-client-example",
-      "domainName": "example.com",
-      "hostedZoneId": "Z0XXXXXXXXX",
-      "hostedZoneName": "example.com",
-      "menuPdfEnabled": false
-    }
-  ]
-}
-```
-
-### 12.5 Onboarding Workflow Integration
-
-The deployment script is called during Stage 5.5:
-
-```
-Stage 5:   Build Website    — Manual: Rocket.new, export to GitHub
-Stage 5.5: Deploy Website   — Run deploy_client_website.py (automated)
-Stage 6:   Setup CRM/Pay    — HubSpot CRM + Stripe Connect
-```
-
-### 12.6 Domain Scenarios
-
-Scenario A: Client needs new domain
-  - Register via Route 53 ($14/year)
-  - deploy_client_website.py detects existing zone
-
-Scenario B: Client has domain elsewhere
-  - Script creates Route 53 hosted zone
-  - Client points NS records (printed by script)
-
-Scenario C: Client domain already on Route 53
-  - Script detects existing zone automatically
-
-### 12.7 Cost Per Client Website
-
-| Resource | Monthly Cost |
-|----------|-------------|
-| S3 bucket | ~$0.50 |
-| CloudFront | ~$0.00-1.00 |
-| Route 53 hosted zone | $0.50 |
-| CodePipeline | $1.00 |
-| ACM certificate | Free |
-| **Total per client** | **~$2.00/month** |
-
-### 12.8 Phase 4 Gate Checklist
-
-```
 [ ] GitHub Issue + feature branch created
-[x] scripts/deploy_client_website.py created and tested
-[x] --dry-run flag works (skips Route 53 and GitHub commit)
-[x] Script reads pipeline-factory config via GitHub API
-[x] Script detects duplicates (by siteName and domainName)
-[x] Script adds correct entry format matching pipeline-factory schema
-[ ] Script commits to pipeline-factory and triggers CodePipeline
-[ ] Script updates HubSpot deal after deployment
-[ ] Test: add a test site, verify pipeline-factory CDK deploys
-[ ] Test: website loads at custom domain with SSL
-[x] tests/test_deploy_client_website.py exists
-[ ] .cursor/skills/dtl-workflow.md updated with Stage 5.5
-[ ] GITHUB_TOKEN added to .env.example
+[ ] Churned stage added to HubSpot pipeline
+[ ] 5 redundant handlers deleted
+[ ] handler_webhook.py created and tested
+[ ] handler_onboard.py updated (accepts deal_id)
+[ ] handler_email_setup.py updated (workspace merged)
+[ ] api_stack.py updated (12 routes)
+[ ] config/hubspot_automations.yaml created
+[ ] scripts/setup_hubspot_automations.py created
+[ ] 25 email templates created in HubSpot
+[ ] 11 workflows created in HubSpot
+[ ] 6 email sequences created in HubSpot
+[ ] Stripe webhook configured in Dashboard
+[ ] Slack incoming webhook configured
+[ ] HubSpot-Slack integration active
+[ ] SSM params added (slack/webhook_url, stripe/webhook_secret)
+[ ] All tests pass
+[ ] cdk deploy --all succeeds
+[ ] Full lifecycle test passes
 [ ] PR merged to main
-```
 
 ---
 
-## 13. Phase 5: Add-On Modules
+## 16-20. Remaining Sections
 
-Status: NOT STARTED
+Same as v2.9.0: Industry Templates, HubSpot Pipeline (now 11 stages with Churned), SEO Prompt, Pricing, CRM Import, GitFlow.
 
-Priority: AI chatbot, Google Workspace email, WhatsApp, Slack/Teams
+---
 
-### Phase 5 Gate
+## 22. Phase Gate Checklist (Complete)
 
-```
-[ ] GitHub Issue + feature branch
-[ ] AI chatbot works on test site
-[ ] Chatbot captures leads to HubSpot
-[ ] Google Workspace DNS records correct
+BOOTSTRAP through PHASE 6 — ALL COMPLETE
+
+PHASE 7 — CRM Automation — NOT STARTED
+[ ] GitHub Issue + feature branch created
+[ ] Churned stage added to HubSpot pipeline
+[ ] 5 redundant handlers deleted
+[ ] handler_webhook.py created and tested
+[ ] handler_onboard.py updated (accepts deal_id)
+[ ] handler_email_setup.py updated (workspace merged)
+[ ] api_stack.py updated (12 routes)
+[ ] config/hubspot_automations.yaml created
+[ ] scripts/setup_hubspot_automations.py created
+[ ] 25 email templates created in HubSpot
+[ ] 11 workflows created in HubSpot
+[ ] 6 email sequences created in HubSpot
+[ ] Stripe webhook configured in Dashboard
+[ ] Slack incoming webhook configured
+[ ] HubSpot-Slack integration active
+[ ] SSM params added (slack/webhook_url, stripe/webhook_secret)
+[ ] All tests pass
+[ ] cdk deploy --all succeeds
+[ ] Full lifecycle test passes
 [ ] PR merged to main
-```
+
+FUTURE PHASES:
+  Phase 8: Automated client reports
+  Phase 9: Client self-service portal
+  Phase 10: Social media automation
+  Phase 11: Google SEO monitoring
 
 ---
 
-## 14. Phase 6: End-to-End Testing and First Client
-
-Status: NOT STARTED
-
-Test ALL 4 client types + CRM import. Stripe in sandbox until first real client.
-
-### Phase 6 Gate
-
-```
-[ ] GitHub Issue + feature branch
-[ ] All 4 client type tests pass
-[ ] CRM import test (50-row CSV)
-[ ] Website deployed via pipeline-factory and loads with SSL
-[ ] All emails received correctly
-[ ] HubSpot CRM configured correctly
-[ ] Stripe accepts test payment
-[ ] Demo under 10 minutes
-[ ] AWS bill under $20
-[ ] 100% serverless verified
-[ ] All PRs merged to main
-[ ] Ready to switch Stripe to PRODUCTION
-```
-
----
-
-## 15. Industry Templates Schema
-
-Roofing template with HubSpot pipelines, custom properties, Stripe products, SEO keywords, chatbot system prompt. Templates stored in engine/templates/ as JSON files.
-
----
-
-## 16. DTL-Global HubSpot Pipeline Definition
-
-Status: DONE. 10 stages: New Lead, Discovery, Proposal and Bid, Contract and Deposit, Build Website, Deploy and Connect, Final Payment, Live and Monthly, Nurture, Lost.
-
----
-
-## 17. SEO Prompt Template
-
-Every AI-generated website prompt includes:
-1. Semantic HTML5
-2. Meta title/description with keywords
-3. H1/H2/H3 hierarchy
-4. Schema.org (LocalBusiness + industry)
-5. Open Graph tags
-6. Mobile-first responsive
-7. robots.txt + sitemap.xml
-8. NAP consistency (Name, Address, Phone)
-9. Internal linking
-10. CTA above fold
-11. Contact form with honeypot
-12. Google Maps embed
-13. Accessibility (ARIA, contrast, keyboard)
-
----
-
-## 18. Pricing Formula
-
-### Custom Request Formula
-
-Custom Price = (Estimated Hours x $75) + Tool Costs + Monthly Maintenance
-Monthly Maintenance = max(20% of setup cost, $49)
-
-### AI Bid Guardrails
-
-Min setup: $300 | Max setup: $10,000
-Min monthly: $20 (F&F) | Regular min: $49 | Max: $999
-Hourly rate: $75 (fixed)
-Deposit: 50% of setup (not applicable for F&F)
-
----
-
-## 19. CRM Data Import Specification
-
-Process: Export CSV from client CRM, upload to S3, AI suggests column mapping, confirm, batch import to HubSpot.
-Limits: 10MB max, 10,000 rows, 100 per batch.
-
----
-
-## 20. GitFlow Workflow
-
-### 20.1 One-Time Setup
-
-GitHub Project "DTL-Global Platform" created (done).
-
-### 20.2 Per-Phase Workflow
-
-BEFORE: Create GitHub Issue, create feature branch from main
-DURING: Granular commits: feat(phase-{N}): {desc} #{issue}
-AFTER: Push, create PR (--body flag), merge (--squash --delete-branch --yes)
-
-### 20.3 Branch Naming
-
-    feature/{issue-number}-phase-{N}-{short-description}
-
-### 20.4 Critical Rules
-
-- NEVER commit directly to main
-- NEVER use interactive CLI commands
-- ALWAYS use --body, --yes, -m flags
-- ALWAYS reference issue number in commits
-- ONE feature branch per phase, ONE PR per phase
-- Squash merge to keep main clean
-
----
-
-## 21. Phase Gate Checklist
+## Appendix A: Environment Variables
 
 ```
-BOOTSTRAP — DONE
-[x] All setup complete
-
-PHASE 0 — HubSpot and Stripe — DONE
-[x] HubSpot setup + verify pass
-[x] Stripe setup + verify pass (9 products)
-
-PHASE 0.5 — SSM and GitFlow — DONE
-[x] 6 SSM parameters created (including github/token)
-[x] GitHub Project exists
-
-PHASE 1 — CDK Infrastructure — DONE
-[x] 4 stacks deployed
-[x] All resources exist
-[x] 100% serverless
-
-PHASE 2 — Lambda Functions — DONE
-[x] 16 handlers + 7 shared modules
-[x] All 4 client types handled
-
-PHASE 3 — AI Layer — NOT STARTED
-[ ] Bid, prompt, estimation working
-[ ] Haiku 4.5 confirmed
-[ ] PR merged to main
-PROCEED TO PHASE 4 (can be done in parallel)
-
-PHASE 4 — Website Deployment (Pipeline-Factory) — IN PROGRESS
-[x] deploy_client_website.py created and tested (dry-run works)
-[x] Script reads pipeline-factory config via GitHub API
-[x] Duplicate detection works
-[x] tests/test_deploy_client_website.py exists
-[ ] Full deployment test (commit to pipeline-factory, verify CDK deploys)
-[ ] Website loads at custom domain with SSL
-[ ] HubSpot deal updated after deployment
-[ ] dtl-workflow.md updated with Stage 5.5
-[ ] PR merged to main
-PROCEED TO PHASE 5
-
-PHASE 5 — Add-Ons — NOT STARTED
-[ ] Chatbot working, leads captured
-[ ] Email DNS automation working
-[ ] PR merged to main
-PROCEED TO PHASE 6
-
-PHASE 6 — E2E Testing — NOT STARTED
-[ ] All 4 client types tested
-[ ] Website deployed via pipeline-factory
-[ ] Full demo under 10 minutes
-[ ] All PRs merged to main
-READY TO ONBOARD REAL CLIENTS
-```
-
----
-
-## Appendix A: Environment Variables (Lambda + Local)
-
-```
-# Lambda Environment Variables (set via CDK)
+# Lambda
 HUBSPOT_TOKEN_PARAM=/dtl-global-platform/hubspot/token
 STRIPE_SECRET_PARAM=/dtl-global-platform/stripe/secret
 STRIPE_CONNECT_CLIENT_ID_PARAM=/dtl-global-platform/stripe/connect_client_id
+STRIPE_WEBHOOK_SECRET_PARAM=/dtl-global-platform/stripe/webhook_secret
 ANTHROPIC_API_KEY_PARAM=/dtl-global-platform/anthropic/api_key
+SLACK_WEBHOOK_URL_PARAM=/dtl-global-platform/slack/webhook_url
 TEMPLATES_TABLE=dtl-industry-templates
 CLIENTS_TABLE=dtl-clients
 STATE_TABLE=dtl-onboarding-state
-WEBSITE_BUCKET=dtl-client-websites-{account_id}
-ASSETS_BUCKET=dtl-assets-{account_id}
-CSV_IMPORT_BUCKET=dtl-csv-imports-{account_id}
 SES_FROM_EMAIL=onboarding@dtl-global.org
 
-# Local Development Only (.env)
-GITHUB_TOKEN=ghp_xxxxxxxxxxxx  # GitHub PAT (repo scope for pipeline-factory)
+# Local (.env)
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx
 HUBSPOT_ACCESS_TOKEN=pat-na1-xxxxx
 STRIPE_SECRET_KEY=sk_test_xxxxx
-ANTHROPIC_API_KEY=sk-ant-xxxxx
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 ```
 
 ## Appendix B: Python Dependencies
 
-```
-# CDK (cdk/requirements.txt)
-aws-cdk-lib>=2.100.0
-constructs>=10.0.0
+Same as v2.9.0.
 
-# Lambda Layer (cdk/lambda_layer/requirements.txt)
-hubspot-api-client>=9.0.0
-stripe>=8.0.0
-anthropic>=0.40.0
-requests>=2.31.0
-
-# Local Development (requirements.txt — project root)
-boto3>=1.34.0
-hubspot-api-client>=9.0.0
-stripe>=8.0.0
-anthropic>=0.40.0
-requests>=2.31.0
-aws-cdk-lib>=2.100.0
-constructs>=10.0.0
-pytest>=8.0.0
-pytest-cov>=5.0.0
-moto>=5.0.0
-python-dotenv>=1.0.0
-```
-
-Note: Lambda functions get boto3 from the Lambda runtime (not the layer).
-The layer provides third-party packages only.
-
-## Appendix C: SSM Parameter Paths
+## Appendix C: SSM Parameter Paths (8 total)
 
 ```
-/dtl-global-platform/hubspot/token                  — HubSpot Private App access token
-/dtl-global-platform/stripe/secret                  — Stripe Secret Key
-/dtl-global-platform/stripe/connect_client_id       — Stripe Connect client ID
-/dtl-global-platform/anthropic/api_key              — Anthropic Claude API key
-/dtl-global-platform/github/codestar_connection_arn — AWS CodeStar connection ARN
-/dtl-global-platform/github/token                   — GitHub PAT (repo scope)
+/dtl-global-platform/hubspot/token
+/dtl-global-platform/stripe/secret
+/dtl-global-platform/stripe/connect_client_id
+/dtl-global-platform/stripe/webhook_secret          (NEW)
+/dtl-global-platform/anthropic/api_key
+/dtl-global-platform/github/codestar_connection_arn
+/dtl-global-platform/github/token
+/dtl-global-platform/slack/webhook_url               (NEW)
 ```
-
-All SecureString. Created via scripts/setup_ssm_parameters.py.
 
 ## Appendix D: Cursor Quick Reference
 
-```
-1. Open dtl-global-platform/ in Cursor
-2. Read DTL_MASTER_PLAN.md
-3. Check phase status (Section 21)
-4. BEFORE starting a phase: create GitHub Issue + feature branch (Rule 012)
-5. Build ONLY current phase
-6. Follow ALL 12 rules
-7. Make granular commits referencing the issue
-8. Run gate checklist before completing
-9. Push, create PR (--body), merge (--squash --yes)
-10. Clean up temp files
-11. Use Sonnet 4 (not Auto)
-12. Ask Gerardo if unsure
-```
+1. Read DTL_MASTER_PLAN.md
+2. Use Haiku 4 (not Auto)
+3. Follow Phase 7 build order (Section 15.10) step by step
+4. Follow all 13 rules
+5. GitFlow: issue + branch + commits + PR
+6. Read config/hubspot_automations.yaml for workflow definitions
+
+## Appendix E: Pipeline-Factory Integration
+
+Same as v2.9.0.
 
 ---
 
-*End of DTL-Global Platform Master Build Plan v2.9.0*
+*End of DTL-Global Platform Master Build Plan v3.0.0*
