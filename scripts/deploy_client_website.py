@@ -4,7 +4,10 @@ This script automates client website provisioning by adding an entry to
 the pipeline-factory's config/websites.json via the GitHub API. When the
 commit lands, pipeline-factory's CodePipeline auto-triggers cdk deploy,
 which provisions S3 + CloudFront + ACM + Route 53 + a client-specific
-CodePipeline for future auto-deploys.
+CodePipeline for future auto-deploys. **Each object in ``websites.json`` gets
+its own CloudFront distribution**, so duplicate rows (e.g. domain mismatch
+by case or re-running with a different ``siteName``) create duplicate
+distributions until removed from config.
 
 Part of Phase 4 of the DTL-Global Platform.
 
@@ -94,6 +97,45 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()  # Parse and return the arguments
 
 
+def normalize_domain(domain: str) -> str:
+    """Normalize a domain for Route 53 comparison and zone creation.
+
+    Route 53 returns zone names in lowercase with a trailing dot. Compare
+    using the same shape so we do not create duplicate public zones when
+    the only difference is casing (or a trailing dot).
+
+    Args:
+        domain: Raw domain from the CLI (e.g. 'BusinessCenterSolutions.net').
+
+    Returns:
+        Lowercase FQDN without trailing dot (e.g. 'businesscentersolutions.net').
+    """
+    # Strip whitespace and lower-case so API responses match the CLI value
+    cleaned = domain.strip().lower()
+    # Remove optional trailing dot from FQDN-style input
+    return cleaned.rstrip(".")
+
+
+def normalize_github_repo_slug(repo: str) -> str:
+    """Normalize a GitHub repo identifier for duplicate detection.
+
+    Accepts ``owner/repo`` or ``repo``; compares case-insensitively on the
+    repository name only (pipeline-factory stores the short repo name).
+
+    Args:
+        repo: Value passed as ``--github-repo`` (e.g. ``businesscenter``).
+
+    Returns:
+        Lowercase repository name without owner prefix (e.g. ``businesscenter``).
+    """
+    # Strip whitespace so CLI typos do not bypass duplicate checks
+    cleaned = repo.strip().lower()
+    # Keep only the repo name when a full ``owner/repo`` path is provided
+    if "/" in cleaned:
+        cleaned = cleaned.split("/")[-1]
+    return cleaned
+
+
 def slugify(name: str) -> str:
     """Convert a business name to a URL-safe slug.
 
@@ -145,28 +187,35 @@ def get_or_create_hosted_zone(domain: str) -> dict:
     Raises:
         SystemExit: If Route 53 operations fail.
     """
+    # Normalize so lookup matches Route 53 API naming (avoids duplicate zones from case drift)
+    domain = normalize_domain(domain)
+
     # Initialize the Route 53 client
     route53 = boto3.client("route53")
 
-    # Search for an existing hosted zone matching the domain
+    # Paginate: ListHostedZonesByName with MaxItems=1 can return the *next* zone
+    # lexicographically when none exists for DNSName; paginating finds an exact name.
+    marker = None  # Pagination cursor for list_hosted_zones (full list scan by caller)
     try:
-        response = route53.list_hosted_zones_by_name(
-            DNSName=domain,  # Search by domain name
-            MaxItems="1"  # We only need the first match
-        )
+        while True:
+            kwargs = {}  # Build kwargs for list_hosted_zones
+            if marker:
+                kwargs["Marker"] = marker  # Continue from prior page
+            response = route53.list_hosted_zones(**kwargs)  # List all zones in this page
+            for zone in response.get("HostedZones", []):
+                zone_name = zone["Name"].rstrip(".").lower()  # Match normalized domain
+                if zone_name == domain and not zone.get("Config", {}).get("PrivateZone", False):
+                    zone_id = zone["Id"].split("/")[-1]  # Extract ID from full path
+                    print(f"  Found existing hosted zone: {zone_id} ({zone_name})")
+                    return {"id": zone_id, "name": zone_name}  # Reuse existing public zone
+            if not response.get("IsTruncated"):  # No more pages
+                break  # Stop scanning
+            marker = response.get("NextMarker")  # Advance pagination
+            if not marker:  # Defensive: avoid infinite loop
+                break
     except Exception as e:
         print(f"ERROR: Failed to query Route 53: {e}")
         sys.exit(1)
-
-    # Check if a matching hosted zone was found
-    zones = response.get("HostedZones", [])  # Get the list of zones
-    for zone in zones:
-        # Route 53 returns zone names with trailing dot
-        zone_name = zone["Name"].rstrip(".")  # Remove trailing dot for comparison
-        if zone_name == domain:  # Exact match found
-            zone_id = zone["Id"].split("/")[-1]  # Extract ID from full path
-            print(f"  Found existing hosted zone: {zone_id} ({zone_name})")
-            return {"id": zone_id, "name": zone_name}
 
     # No existing zone found — create a new one
     print(f"  No hosted zone found for {domain}. Creating one...")
@@ -238,25 +287,42 @@ def read_pipeline_factory_config(token: str) -> tuple:
     return config, file_sha  # Return the config and SHA
 
 
-def check_duplicate(config: dict, site_name: str, domain: str) -> bool:
+def check_duplicate(config: dict, site_name: str, domain: str,
+                    github_repo: str) -> bool:
     """Check if a site already exists in the pipeline-factory config.
+
+    Uses the same normalization as Route 53 (domain casing) so duplicate
+    entries are not appended. Each new entry triggers pipeline-factory to
+    provision another S3 + CloudFront stack, which is why false negatives
+    produce duplicate distributions.
 
     Args:
         config: The parsed websites.json config dict.
         site_name: The site name to check for (e.g., 'smith-roofing-website').
-        domain: The domain to check for (e.g., 'smithroofing.com').
+        domain: The domain to check for (e.g., 'smithroofing.com'); normalized.
+        github_repo: GitHub repo slug for this site; normalized for comparison.
 
     Returns:
         True if a duplicate is found, False otherwise.
     """
+    # Normalize once so config values differing only by case still match
+    domain_key = normalize_domain(domain)
+    repo_key = normalize_github_repo_slug(github_repo)
     # Iterate through existing websites to check for duplicates
     for site in config.get("websites", []):
         if site.get("siteName") == site_name:  # Check by site name
             print(f"  WARNING: Site '{site_name}' already exists in pipeline-factory.")
             return True  # Duplicate found by name
-        if site.get("domainName") == domain:  # Check by domain
-            print(f"  WARNING: Domain '{domain}' already exists in pipeline-factory.")
+        existing_domain = site.get("domainName") or ""
+        if normalize_domain(existing_domain) == domain_key:  # Same apex/www-normalized domain
+            print(f"  WARNING: Domain '{domain_key}' already exists in pipeline-factory.")
             return True  # Duplicate found by domain
+        existing_repo = normalize_github_repo_slug(site.get("githubRepo") or "")
+        if repo_key and existing_repo == repo_key:  # Same website repo
+            print(
+                f"  WARNING: GitHub repo '{repo_key}' already exists in pipeline-factory."
+            )
+            return True  # Duplicate found by repo
 
     return False  # No duplicate found
 
@@ -411,15 +477,18 @@ def main() -> None:
 
     Orchestrates the full deployment flow:
     1. Parse arguments and validate inputs
-    2. Get or create Route 53 hosted zone
-    3. Read pipeline-factory config from GitHub
-    4. Add new client entry (if not duplicate)
-    5. Commit updated config to pipeline-factory
+    2. Read pipeline-factory config from GitHub
+    3. Reject duplicates (before Route 53 — each config row provisions CloudFront)
+    4. Get or create Route 53 hosted zone
+    5. Add new client entry and commit to pipeline-factory
     6. Update HubSpot deal
     7. Print summary
     """
     # Parse command-line arguments
     args = parse_args()
+
+    # Single canonical domain shape for duplicate checks, GitHub config, and Route 53
+    args.domain = normalize_domain(args.domain)
 
     # Print header
     print("=" * 60)
@@ -437,31 +506,37 @@ def main() -> None:
     token = get_github_token()  # Get token from environment
     print("  GitHub token found.")
 
-    # Step 2: Get or create Route 53 hosted zone
-    print(f"[2/6] Setting up DNS for {args.domain}...")
-    if args.hosted_zone_id:  # User provided the zone ID
-        zone_info = {
-            "id": args.hosted_zone_id,
-            "name": args.hosted_zone_name or args.domain
-        }
-        print(f"  Using provided hosted zone: {zone_info['id']}")
-    else:  # Auto-detect or create
-        zone_info = get_or_create_hosted_zone(args.domain)
-
-    # Step 3: Read current pipeline-factory config
-    print("[3/6] Reading pipeline-factory config...")
+    # Step 2: Read current pipeline-factory config (before Route 53 to avoid stray zones)
+    print("[2/6] Reading pipeline-factory config...")
     config, file_sha = read_pipeline_factory_config(token)
     print(f"  Found {len(config.get('websites', []))} existing sites.")
 
-    # Step 4: Check for duplicates
-    print("[4/6] Checking for duplicates...")
+    # Step 3: Check for duplicates (each row in websites.json provisions another CloudFront)
+    print("[3/6] Checking for duplicates...")
     site_name = f"{slugify(args.client_name)}-website"  # Generate the site name
-    if check_duplicate(config, site_name, args.domain):
+    if check_duplicate(config, site_name, args.domain, args.github_repo):
         print("  Site already exists. No changes needed.")
         print()
         print("RESULT: No changes made (duplicate detected).")
         sys.exit(0)  # Exit cleanly — not an error
     print("  No duplicates found. Proceeding.")
+
+    # Step 4: Get or create Route 53 hosted zone
+    print(f"[4/6] Setting up DNS for {args.domain}...")
+    if args.hosted_zone_id:  # User provided the zone ID
+        zone_info = {
+            "id": args.hosted_zone_id,
+            "name": normalize_domain(args.hosted_zone_name or args.domain)
+        }
+        print(f"  Using provided hosted zone: {zone_info['id']}")
+    elif args.dry_run:  # Avoid creating real zones during preview runs
+        zone_info = {
+            "id": "DRYRUN-ZONE-ID",
+            "name": args.domain
+        }
+        print("  DRY RUN: skipping Route 53 (use --hosted-zone-id to test with a real zone ID).")
+    else:  # Auto-detect or create
+        zone_info = get_or_create_hosted_zone(args.domain)
 
     # Step 5: Add new site and commit
     print("[5/6] Adding client to pipeline-factory...")

@@ -19,9 +19,43 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 # === Local Imports ===
 from deploy_client_website import (
     slugify,
+    normalize_domain,
+    normalize_github_repo_slug,
     check_duplicate,
     add_site_to_config,
 )
+
+
+class TestNormalizeGithubRepoSlug(unittest.TestCase):
+    """Tests for normalize_github_repo_slug."""
+
+    def test_owner_repo_form(self):
+        """owner/repo should compare equal to repo-only form."""
+        self.assertEqual(
+            normalize_github_repo_slug("TolKiger/dtl-client-foo"), "dtl-client-foo",
+        )
+
+    def test_case_insensitive(self):
+        """Repo slugs should fold case for duplicate detection."""
+        self.assertEqual(normalize_github_repo_slug("BusinessCenter"), "businesscenter")
+
+
+class TestNormalizeDomain(unittest.TestCase):
+    """Tests for normalize_domain (Route 53-safe comparison)."""
+
+    def test_lowercases_and_strips_trailing_dot(self):
+        """FQDN-style input should match Route 53 API name shape."""
+        self.assertEqual(
+            normalize_domain("BusinessCenterSolutions.NET."),
+            "businesscentersolutions.net",
+        )
+
+    def test_strips_whitespace(self):
+        """Leading or trailing spaces should not break zone reuse."""
+        self.assertEqual(
+            normalize_domain("  example.com "),
+            "example.com",
+        )
 
 
 class TestSlugify(unittest.TestCase):
@@ -68,23 +102,33 @@ class TestCheckDuplicate(unittest.TestCase):
 
     def test_duplicate_by_site_name(self):
         """Test detection of duplicate by site name."""
-        result = check_duplicate(self.config, "smith-roofing-website", "other.com")
+        result = check_duplicate(self.config, "smith-roofing-website", "other.com", "dtl-client-other")
         self.assertTrue(result)  # Should detect duplicate
 
     def test_duplicate_by_domain(self):
         """Test detection of duplicate by domain name."""
-        result = check_duplicate(self.config, "other-website", "smithroofing.com")
+        result = check_duplicate(self.config, "other-website", "smithroofing.com", "dtl-client-other")
         self.assertTrue(result)  # Should detect duplicate
+
+    def test_duplicate_by_domain_case_insensitive(self):
+        """Domain in config vs CLI may differ only by case (prevents extra CloudFront rows)."""
+        result = check_duplicate(self.config, "new-website", "SmithRoofing.COM", "dtl-client-smith-roofing")
+        self.assertTrue(result)
+
+    def test_duplicate_by_github_repo(self):
+        """Same GitHub repo must not get a second pipeline-factory entry."""
+        result = check_duplicate(self.config, "different-name-website", "different.com", "dtl-client-smith-roofing")
+        self.assertTrue(result)
 
     def test_no_duplicate(self):
         """Test that non-duplicates pass through."""
-        result = check_duplicate(self.config, "jones-plumbing-website", "jonesplumbing.com")
+        result = check_duplicate(self.config, "jones-plumbing-website", "jonesplumbing.com", "dtl-client-jones")
         self.assertFalse(result)  # Should not detect duplicate
 
     def test_empty_config(self):
         """Test with empty websites array."""
         empty_config = {"websites": []}
-        result = check_duplicate(empty_config, "any-website", "any.com")
+        result = check_duplicate(empty_config, "any-website", "any.com", "any-repo")
         self.assertFalse(result)  # No duplicates possible
 
 
