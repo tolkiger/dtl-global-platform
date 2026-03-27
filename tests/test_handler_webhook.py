@@ -44,7 +44,7 @@ class TestWebhookHandler:
         }
     
     @patch('handler_webhook.config.get_secret')
-    @patch('handler_webhook.stripe.Webhook.construct_event')
+    @patch('stripe.Webhook.construct_event')
     @patch('handler_webhook._handle_invoice_paid')
     def test_invoice_paid_webhook_success(self, mock_handle_invoice, mock_construct_event, mock_get_secret):
         """Test successful processing of invoice.paid webhook."""
@@ -76,7 +76,7 @@ class TestWebhookHandler:
         mock_handle_invoice.assert_called_once()
     
     @patch('handler_webhook.config.get_secret')
-    @patch('handler_webhook.stripe.Webhook.construct_event')
+    @patch('stripe.Webhook.construct_event')
     @patch('handler_webhook._handle_subscription_deleted')
     def test_subscription_deleted_webhook_success(self, mock_handle_subscription, mock_construct_event, mock_get_secret):
         """Test successful processing of customer.subscription.deleted webhook."""
@@ -108,7 +108,7 @@ class TestWebhookHandler:
         mock_handle_subscription.assert_called_once()
     
     @patch('handler_webhook.config.get_secret')
-    @patch('handler_webhook.stripe.Webhook.construct_event')
+    @patch('stripe.Webhook.construct_event')
     def test_invalid_signature_rejection(self, mock_construct_event, mock_get_secret):
         """Test rejection of webhook with invalid signature."""
         # Arrange
@@ -133,7 +133,7 @@ class TestWebhookHandler:
         assert 'Invalid webhook signature' in response_body['error']
     
     @patch('handler_webhook.config.get_secret')
-    @patch('handler_webhook.stripe.Webhook.construct_event')
+    @patch('stripe.Webhook.construct_event')
     def test_unknown_event_type_handling(self, mock_construct_event, mock_get_secret):
         """Test handling of unknown webhook event types."""
         # Arrange
