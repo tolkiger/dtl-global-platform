@@ -1,8 +1,8 @@
-# DTL-Global Platform — Master Build Plan v3.0.0
+# DTL-Global Platform — Master Build Plan v3.0.1
 
 > **Owner:** Gerardo Castaneda — DTL-Global
 > **Created:** 2026-03-21
-> **Updated:** 2026-03-26 (v3.0.0 — Phase 7: CRM Automation & Lifecycle Management)
+> **Updated:** 2026-03-27 (v3.0.1 — plan gates synced with main; Phase 7 code complete)
 > **Purpose:** This document is the single source of truth for building the DTL-Global onboarding platform.
 > **AI Model for Implementation:** Claude Haiku 4 via Cursor.
 
@@ -12,6 +12,7 @@
 
 | Version | Changes |
 |---------|--------|
+| v3.0.1 | Plan only: Current Progress + Section 22 gates updated — Phase 7 platform code merged (main #42). HubSpot operational setup (templates, workflows, sequences) tracked separately. Canonical HubSpot automation YAML: `hubspot/dtl-global-platform-app/config/hubspot_automations.yaml` (see Section 2). |
 | v3.0.0 | Phase 7 CRM Automation: 11 HubSpot workflows, 6 email sequences, Slack notifications, cold lead + churned win-back, Churned stage. Engine refactoring: removed 5 handlers, added handler_webhook.py. 12 Lambda handlers total. |
 | v2.9.0 | Phase 4 pipeline-factory integration, deploy_client_website.py |
 | v2.8.1 | Lambda layer: pre-built python/ only, no Docker |
@@ -36,12 +37,12 @@
 | Phase 0 (HubSpot + Stripe) | COMPLETE |
 | Phase 0.5 (SSM + GitFlow) | COMPLETE |
 | Phase 1 (CDK) | COMPLETE |
-| Phase 2 (Lambda) | COMPLETE — needs refactoring |
+| Phase 2 (Lambda) | COMPLETE — refactored in Phase 7 (12 handlers) |
 | Phase 3 (AI) | COMPLETE |
 | Phase 4 (Website Deploy) | COMPLETE |
 | Phase 5 (Add-Ons) | COMPLETE |
 | Phase 6 (E2E Testing) | COMPLETE |
-| **Phase 7 (CRM Automation)** | **NOT STARTED** |
+| **Phase 7 (CRM Automation)** | **COMPLETE — code on main (#42); verify HubSpot/Stripe ops in your accounts** |
 
 ---
 
@@ -74,8 +75,10 @@ dtl-global-platform/
 +-- .cursor/rules/dtl-global.mdc
 +-- .cursor/skills/ (4 files)
 +-- docs/AUTHENTICATION.md
++-- hubspot/dtl-global-platform-app/config/
+|   +-- hubspot_automations.yaml       # NEW: CRM workflow definitions (canonical source of truth)
 +-- config/
-|   +-- hubspot_automations.yaml       # NEW: CRM workflow definitions
+|   +-- hubspot_automations.yaml       # Same definitions (kept for scripts paths / legacy tooling)
 +-- scripts/
 |   +-- phase0_hubspot_setup.py
 |   +-- phase0_stripe_setup.py
@@ -106,10 +109,12 @@ dtl-global-platform/
 
 | New File | Purpose |
 |----------|--------|
-| config/hubspot_automations.yaml | CRM workflow definitions |
+| hubspot/dtl-global-platform-app/config/hubspot_automations.yaml | CRM workflow definitions (**canonical**; edit here first) |
+| config/hubspot_automations.yaml | Same definitions (compatibility / some tooling) |
 | scripts/setup_hubspot_automations.py | Creates HubSpot workflows from YAML |
 | engine/handlers/handler_webhook.py | Stripe webhook receiver |
 | tests/test_handler_webhook.py | Webhook handler tests |
+| tests/test_hubspot_automations.py | Automation script tests |
 
 ---
 
@@ -463,26 +468,29 @@ Step 17: Test full lifecycle: create deal -> move through all stages -> verify a
 
 ### 15.11 Phase 7 Gate Checklist
 
-[ ] GitHub Issue + feature branch created
-[ ] Churned stage added to HubSpot pipeline
-[ ] 5 redundant handlers deleted
-[ ] handler_webhook.py created and tested
-[ ] handler_onboard.py updated (accepts deal_id)
-[ ] handler_email_setup.py updated (workspace merged)
-[ ] api_stack.py updated (12 routes)
-[ ] config/hubspot_automations.yaml created
-[ ] scripts/setup_hubspot_automations.py created
-[ ] 25 email templates created in HubSpot
-[ ] 11 workflows created in HubSpot
-[ ] 6 email sequences created in HubSpot
-[ ] Stripe webhook configured in Dashboard
-[ ] Slack incoming webhook configured
-[ ] HubSpot-Slack integration active
-[ ] SSM params added (slack/webhook_url, stripe/webhook_secret)
-[ ] All tests pass
-[ ] cdk deploy --all succeeds
-[ ] Full lifecycle test passes
-[ ] PR merged to main
+**Repository / platform (target: main — merged as PR #42)**
+
+[x] GitHub Issue + feature branch used (GitFlow)
+[x] 5 redundant handlers deleted
+[x] handler_webhook.py created and tested
+[x] handler_onboard.py updated (accepts deal_id)
+[x] handler_email_setup.py updated (workspace merged)
+[x] api_stack.py updated (12 routes)
+[x] hubspot_automations.yaml present (canonical + config copy)
+[x] scripts/setup_hubspot_automations.py created
+[x] Tests: test_handler_webhook.py, test_hubspot_automations.py
+[x] SSM params defined for slack/webhook_url, stripe/webhook_secret (scripts + verify)
+[x] Phase 7 implementation merged to main
+
+**Operations (your HubSpot / Stripe accounts — not fully automatable via API on all tiers)**
+
+[ ] Churned stage added to HubSpot pipeline (UI or API-supported path)
+[ ] Email templates / workflows / sequences in HubSpot match YAML intent (full parity may require HubSpot UI)
+[ ] Stripe webhook configured in Dashboard: `{api-gw}/prod/webhook/stripe`, events: invoice.paid, customer.subscription.deleted
+[ ] Slack incoming webhook URL in SSM; notifications verified end-to-end
+[ ] HubSpot–Slack integration (if you use native integration in addition to Lambda Slack posts)
+[ ] cdk deploy --all succeeds in target account
+[ ] Full lifecycle test: deal stages + Stripe events behave as expected
 
 ---
 
@@ -496,27 +504,12 @@ Same as v2.9.0: Industry Templates, HubSpot Pipeline (now 11 stages with Churned
 
 BOOTSTRAP through PHASE 6 — ALL COMPLETE
 
-PHASE 7 — CRM Automation — NOT STARTED
-[ ] GitHub Issue + feature branch created
-[ ] Churned stage added to HubSpot pipeline
-[ ] 5 redundant handlers deleted
-[ ] handler_webhook.py created and tested
-[ ] handler_onboard.py updated (accepts deal_id)
-[ ] handler_email_setup.py updated (workspace merged)
-[ ] api_stack.py updated (12 routes)
-[ ] config/hubspot_automations.yaml created
-[ ] scripts/setup_hubspot_automations.py created
-[ ] 25 email templates created in HubSpot
-[ ] 11 workflows created in HubSpot
-[ ] 6 email sequences created in HubSpot
-[ ] Stripe webhook configured in Dashboard
-[ ] Slack incoming webhook configured
-[ ] HubSpot-Slack integration active
-[ ] SSM params added (slack/webhook_url, stripe/webhook_secret)
-[ ] All tests pass
-[ ] cdk deploy --all succeeds
-[ ] Full lifecycle test passes
-[ ] PR merged to main
+PHASE 7 — CRM Automation — CODE COMPLETE (main #42); ops verification ongoing
+[x] Platform code: handlers, CDK 12 routes, webhook, tests, SSM wiring — merged to main
+[ ] HubSpot: pipeline stage(s), templates/workflows/sequences as needed for your plan tier
+[ ] Stripe: dashboard webhook → `/prod/webhook/stripe`
+[ ] SSM: production values for webhook secret + Slack URL (if not already set)
+[ ] E2E: deal lifecycle + Stripe events in a real or staging account
 
 FUTURE PHASES:
   Phase 8: Automated client reports
