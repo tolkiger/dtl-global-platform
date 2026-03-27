@@ -14,6 +14,7 @@ Author: DTL-Global Platform
 
 import os
 import boto3
+import requests
 from typing import Dict, List, Optional
 from botocore.exceptions import ClientError
 
@@ -24,6 +25,8 @@ SSM_PARAMS = {
     "stripe_secret": "/dtl-global-platform/stripe/secret", 
     "stripe_connect_client_id": "/dtl-global-platform/stripe/connect_client_id",
     "anthropic_api_key": "/dtl-global-platform/anthropic/api_key",
+    "stripe_webhook_secret": "/dtl-global-platform/stripe/webhook_secret",
+    "slack_webhook_url": "/dtl-global-platform/slack/webhook_url",
 }
 
 # Client type definitions mapping to required services
@@ -281,3 +284,35 @@ def is_service_required(client_type: str, service: str) -> bool:
         return False  # Email is optional for this client type
     
     return service in services
+
+
+def send_slack_notification(message: str) -> None:
+    """Send notification to Slack webhook.
+    
+    This function sends a message to the configured Slack webhook URL.
+    It's designed to be non-critical - if Slack fails, it won't break
+    the main workflow.
+    
+    Args:
+        message: Message text to send to Slack
+    """
+    try:
+        # Get Slack webhook URL from SSM
+        slack_url = config.get_secret('slack_webhook_url')  # Slack incoming webhook URL
+        
+        # Send POST request to Slack webhook
+        payload = {'text': message}  # Slack webhook payload format
+        response = requests.post(
+            slack_url,
+            json=payload,
+            timeout=10
+        )  # POST to Slack webhook with timeout
+        
+        if response.status_code == 200:
+            print(f"Slack notification sent: {message}")
+        else:
+            print(f"WARNING: Slack notification failed with status {response.status_code}")
+            
+    except Exception as e:
+        print(f"WARNING: Failed to send Slack notification: {e}")
+        # Don't fail the main workflow if Slack fails (non-critical)

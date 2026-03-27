@@ -1,0 +1,558 @@
+# DTL-Global Platform — HubSpot CRM Automation Configuration
+# Version: 3.0.0
+# Purpose: Defines all HubSpot workflows, email sequences, and task automations
+# Used by: scripts/setup_hubspot_automations.py
+# 
+# This file is the single source of truth for CRM automation.
+# The setup script reads this YAML and creates everything in HubSpot via API.
+
+# ============================================================
+# PIPELINE UPDATE
+# ============================================================
+pipeline:
+  name: "DTL-Global Client Onboarding"
+  new_stages:
+    - name: "Churned"
+      display_order: 10
+      description: "Client was active but cancelled subscription"
+
+# ============================================================
+# DEAL STAGE WORKFLOWS
+# ============================================================
+workflows:
+  - name: "DTL — New Lead"
+    trigger:
+      type: "deal_stage_change"
+      stage: "New Lead"
+    actions:
+      - type: "create_task"
+        title: "Initial contact with {client_business_name}"
+        due_days: 0
+        priority: "HIGH"
+        notes: "New lead from {referral_source}. Contact: {email}, {phone}"
+      - type: "slack_notification"
+        message: "New Lead: {client_business_name} ({client_industry}) - {email}"
+      - type: "send_email"
+        template_name: "new_lead_welcome"
+        delay_days: 0
+
+  - name: "DTL — Discovery"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Discovery"
+    actions:
+      - type: "create_task"
+        title: "Schedule discovery meeting with {client_business_name}"
+        due_days: 1
+        priority: "MEDIUM"
+      - type: "send_email"
+        template_name: "discovery_scheduled"
+        delay_days: 0
+
+  - name: "DTL — Proposal & Bid"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Proposal & Bid"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/bid"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}"}'
+        description: "Trigger AI bid generation"
+      - type: "create_task"
+        title: "Review AI bid and send proposal to {client_business_name}"
+        due_days: 2
+        priority: "HIGH"
+      - type: "send_email"
+        template_name: "proposal_preparing"
+        delay_days: 0
+      - type: "slack_notification"
+        message: "Proposal stage: {client_business_name} - AI bid generating"
+
+  - name: "DTL — Contract & Deposit"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Contract & Deposit"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/invoice"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}", "invoice_type": "deposit", "percentage": 50}'
+        description: "Create Stripe deposit invoice (50%)"
+      - type: "send_email"
+        template_name: "deposit_invoice_sent"
+        delay_days: 0
+      - type: "create_task"
+        title: "Follow up on deposit payment - {client_business_name}"
+        due_days: 3
+        priority: "HIGH"
+      - type: "slack_notification"
+        message: "Deposit invoice sent: {client_business_name} - ${deposit_amount}"
+
+  - name: "DTL — Build Website"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Build Website"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/prompt"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}"}'
+        description: "Generate SEO-optimized Rocket.new prompt"
+      - type: "create_task"
+        title: "Build website for {client_business_name} in Rocket.new"
+        due_days: 5
+        priority: "HIGH"
+        notes: "Check deal notes for AI-generated Rocket.new prompt"
+      - type: "send_email"
+        template_name: "website_building"
+        delay_days: 0
+
+  - name: "DTL — Deploy & Connect"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Deploy & Connect"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/onboard"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}"}'
+        description: "Trigger full onboarding automation"
+      - type: "create_task"
+        title: "Verify deployment for {client_business_name}"
+        due_days: 1
+        priority: "HIGH"
+      - type: "send_email"
+        template_name: "systems_deploying"
+        delay_days: 0
+      - type: "slack_notification"
+        message: "Deploying: {client_business_name} - automation triggered"
+
+  - name: "DTL — Final Payment"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Final Payment"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/invoice"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}", "invoice_type": "final", "percentage": 50}'
+        description: "Create Stripe final invoice (remaining 50%)"
+      - type: "send_email"
+        template_name: "final_invoice_sent"
+        delay_days: 0
+      - type: "create_task"
+        title: "Follow up on final payment - {client_business_name}"
+        due_days: 3
+        priority: "HIGH"
+
+  - name: "DTL — Live & Monthly"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Live & Monthly"
+    actions:
+      - type: "webhook"
+        url_path: "/prod/subscribe"
+        method: "POST"
+        body_template: '{"deal_id": "{deal_id}"}'
+        description: "Create monthly Stripe subscription"
+      - type: "send_email"
+        template_name: "welcome_live"
+        delay_days: 0
+      - type: "create_task"
+        title: "30-day check-in with {client_business_name}"
+        due_days: 30
+        priority: "LOW"
+      - type: "slack_notification"
+        message: "CLIENT LIVE: {client_business_name} at https://{client_website_domain}"
+      - type: "enroll_sequence"
+        sequence_name: "post_onboarding_care"
+
+  - name: "DTL — Nurture"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Nurture"
+    actions:
+      - type: "enroll_sequence"
+        sequence_name: "cold_lead_nurture"
+      - type: "create_task"
+        title: "Follow up with {client_business_name}"
+        due_days: 30
+        priority: "LOW"
+
+  - name: "DTL — Lost"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Lost"
+    actions:
+      - type: "send_email"
+        template_name: "deal_lost_feedback"
+        delay_days: 1
+      - type: "create_task"
+        title: "Log lost reason for {client_business_name}"
+        due_days: 0
+        priority: "MEDIUM"
+      - type: "slack_notification"
+        message: "Deal LOST: {client_business_name}"
+
+  - name: "DTL — Churned"
+    trigger:
+      type: "deal_stage_change"
+      stage: "Churned"
+    actions:
+      - type: "enroll_sequence"
+        sequence_name: "churned_winback"
+      - type: "send_email"
+        template_name: "churned_sorry"
+        delay_days: 0
+      - type: "create_task"
+        title: "Call {client_business_name} to understand churn reason"
+        due_days: 1
+        priority: "HIGH"
+      - type: "slack_notification"
+        message: "CLIENT CHURNED: {client_business_name} - subscription cancelled"
+
+# ============================================================
+# EMAIL TEMPLATES
+# ============================================================
+email_templates:
+  # --- New Lead Welcome Sequence ---
+  - name: "new_lead_welcome"
+    subject: "Welcome to DTL-Global — Let's Transform Your Business"
+    body: |
+      Hi {first_name},
+
+      Thanks for reaching out to DTL-Global! We help businesses like yours
+      get online with professional websites, CRM systems, and payment processing.
+
+      I'd love to learn more about your business and how we can help.
+      Would you be open to a quick 15-minute discovery call?
+
+      Best,
+      Gerardo Castaneda
+      DTL-Global | dtl-global.org
+
+  - name: "new_lead_value"
+    subject: "How We Help {client_industry} Businesses Like Yours"
+    body: |
+      Hi {first_name},
+
+      Did you know that businesses with a professional online presence
+      get 2-3x more customer inquiries?
+
+      At DTL-Global, we specialize in helping {client_industry} businesses:
+      - Build professional, SEO-optimized websites
+      - Set up CRM systems to track leads and customers
+      - Accept payments online seamlessly
+
+      Ready to chat? Reply to this email or call me directly.
+
+      Best,
+      Gerardo
+
+  - name: "new_lead_schedule"
+    subject: "Ready to Chat? Let's Schedule a Quick Call"
+    body: |
+      Hi {first_name},
+
+      Just checking in — I'd love to show you how we can help
+      {client_business_name} grow with the right technology.
+
+      A quick 15-minute call is all it takes. No pressure, no commitment.
+
+      Reply with a time that works for you, or call me at (your phone).
+
+      Best,
+      Gerardo
+
+  - name: "new_lead_last_chance"
+    subject: "Last Chance — Special Offer for New Clients"
+    body: |
+      Hi {first_name},
+
+      I wanted to reach out one more time. We're currently offering
+      new clients a special discount on our setup packages.
+
+      This offer expires soon. If you're interested, just reply
+      and we'll get you started.
+
+      Best,
+      Gerardo
+
+  # --- Discovery ---
+  - name: "discovery_scheduled"
+    subject: "Thanks for Your Interest — Let's Talk!"
+    body: |
+      Hi {first_name},
+
+      Great news! I'm looking forward to learning more about
+      {client_business_name} and how we can help.
+
+      During our call, we'll discuss:
+      - Your current online presence
+      - Your business goals
+      - How technology can help you grow
+
+      Talk soon!
+      Gerardo
+
+  # --- Proposal ---
+  - name: "proposal_preparing"
+    subject: "We're Preparing Your Custom Proposal"
+    body: |
+      Hi {first_name},
+
+      Great news! We're putting together a custom proposal for
+      {client_business_name}. You'll receive it within 2 business days.
+
+      The proposal will include:
+      - Recommended services for your business
+      - Pricing and timeline
+      - What's included in your package
+
+      Stay tuned!
+      Gerardo
+
+  # --- Contract & Deposit ---
+  - name: "deposit_invoice_sent"
+    subject: "Your Invoice is Ready — Let's Get Started!"
+    body: |
+      Hi {first_name},
+
+      Your invoice for the 50% deposit (${deposit_amount}) is ready.
+      Once payment is received, we'll start building your systems right away.
+
+      You can pay securely via the link in your Stripe invoice email.
+
+      Questions? Just reply to this email.
+
+      Best,
+      Gerardo
+
+  # --- Build Website ---
+  - name: "website_building"
+    subject: "We've Started Building Your Website!"
+    body: |
+      Hi {first_name},
+
+      Exciting news! We've started building the website for
+      {client_business_name}. You'll receive a preview within
+      5 business days.
+
+      What to expect:
+      - Professional, mobile-responsive design
+      - SEO optimization for local search
+      - Contact forms connected to your CRM
+
+      We'll send you a preview link for your review soon!
+
+      Best,
+      Gerardo
+
+  # --- Deploy ---
+  - name: "systems_deploying"
+    subject: "Your Systems Are Being Set Up"
+    body: |
+      Hi {first_name},
+
+      Your website and business systems are being deployed right now.
+      This includes:
+      - Website going live at your domain
+      - CRM system configuration
+      - Payment processing setup
+
+      You'll receive login details and a welcome guide shortly.
+
+      Best,
+      Gerardo
+
+  # --- Final Payment ---
+  - name: "final_invoice_sent"
+    subject: "Your Systems Are Live — Final Invoice"
+    body: |
+      Hi {first_name},
+
+      Everything is up and running for {client_business_name}!
+      Your final invoice (${deposit_amount}) is attached.
+
+      Once paid, your monthly subscription will begin and you'll
+      have full ongoing support.
+
+      Best,
+      Gerardo
+
+  # --- Live ---
+  - name: "welcome_live"
+    subject: "Welcome Aboard! Everything You Need to Know"
+    body: |
+      Hi {first_name},
+
+      Congratulations! {client_business_name} is fully set up and live!
+
+      Here's everything you need:
+      - Website: https://{client_website_domain}
+      - CRM Dashboard: (HubSpot login link)
+      - Payment Dashboard: (Stripe dashboard link)
+
+      Your monthly subscription is now active. I'll check in with you
+      in 30 days to make sure everything is running smoothly.
+
+      Welcome to DTL-Global!
+      Gerardo
+
+  # --- Nurture ---
+  - name: "nurture_no_worries"
+    subject: "No Worries — We'll Be Here When You're Ready"
+    body: |
+      Hi {first_name},
+
+      No pressure at all! We understand timing is everything.
+      When you're ready to take {client_business_name} to the next level,
+      we'll be here.
+
+      In the meantime, feel free to reach out anytime with questions.
+
+      Best,
+      Gerardo
+
+  # --- Lost ---
+  - name: "deal_lost_feedback"
+    subject: "Quick Question — How Can We Improve?"
+    body: |
+      Hi {first_name},
+
+      We're sorry it didn't work out this time. Would you mind
+      sharing what held you back? Your feedback helps us improve.
+
+      Just reply with a quick note — it means a lot.
+
+      Best,
+      Gerardo
+
+  # --- Churned ---
+  - name: "churned_sorry"
+    subject: "We're Sorry to See You Go, {first_name}"
+    body: |
+      Hi {first_name},
+
+      We noticed your subscription for {client_business_name} was cancelled.
+      We're sorry to see you go.
+
+      Would you mind sharing why? We'd love to understand and improve.
+      Just reply with a quick note.
+
+      If there's anything we can do to help, we're here.
+
+      Best,
+      Gerardo
+
+  # --- Post-Onboarding Care ---
+  - name: "care_first_week"
+    subject: "How's Your First Week?"
+    body: |
+      Hi {first_name},
+
+      It's been a week since {client_business_name} went live!
+      How's everything going?
+
+      Quick tips to get the most out of your system:
+      1. Check your CRM dashboard daily for new leads
+      2. Respond to inquiries within 24 hours
+      3. Share your new website on social media
+
+      Questions? Just reply!
+      Gerardo
+
+  - name: "care_30day"
+    subject: "Your First Month — How's Everything?"
+    body: |
+      Hi {first_name},
+
+      It's been 30 days! I wanted to check in and see how
+      {client_business_name} is doing with the new systems.
+
+      Is there anything you'd like to adjust or improve?
+      I'm happy to hop on a quick call.
+
+      Best,
+      Gerardo
+
+# ============================================================
+# EMAIL SEQUENCES
+# ============================================================
+sequences:
+  - name: "cold_lead_nurture"
+    description: "12-month nurture for leads who said not now"
+    emails:
+      - template: "nurture_no_worries"
+        delay_days: 0
+      - template: "new_lead_value"
+        delay_days: 30
+      - template: "new_lead_schedule"
+        delay_days: 60
+      - template: "new_lead_last_chance"
+        delay_days: 90
+      - template: "nurture_no_worries"
+        delay_days: 180
+      - template: "new_lead_last_chance"
+        delay_days: 365
+
+  - name: "post_onboarding_care"
+    description: "Post-onboarding check-ins for active clients"
+    emails:
+      - template: "care_first_week"
+        delay_days: 7
+      - template: "care_30day"
+        delay_days: 30
+
+  - name: "churned_winback"
+    description: "6-month win-back for cancelled clients"
+    emails:
+      - template: "churned_sorry"
+        delay_days: 0
+      - template: "new_lead_value"
+        delay_days: 14
+      - template: "new_lead_last_chance"
+        delay_days: 60
+      - template: "nurture_no_worries"
+        delay_days: 180
+
+# ============================================================
+# SLACK NOTIFICATIONS
+# ============================================================
+slack_notifications:
+  - event: "new_lead"
+    message: "New Lead: {client_business_name} ({client_industry}) - {email}"
+  - event: "deposit_paid"
+    message: "Payment received: {client_business_name} - ${deposit_amount}"
+  - event: "deploying"
+    message: "Deploying: {client_business_name} - automation triggered"
+  - event: "client_live"
+    message: "CLIENT LIVE: {client_business_name} at https://{client_website_domain}"
+  - event: "deal_lost"
+    message: "Deal LOST: {client_business_name}"
+  - event: "client_churned"
+    message: "CLIENT CHURNED: {client_business_name} - subscription cancelled"
+  - event: "task_overdue"
+    message: "OVERDUE: {task_title} - {overdue_days} days overdue"
+
+# ============================================================
+# RECURRING TASKS
+# ============================================================
+recurring_tasks:
+  - name: "Monthly check-in"
+    frequency_days: 30
+    trigger_stage: "Live & Monthly"
+    priority: "LOW"
+  - name: "Quarterly review"
+    frequency_days: 90
+    trigger_stage: "Live & Monthly"
+    priority: "MEDIUM"
+  - name: "Website content review"
+    frequency_days: 60
+    trigger_stage: "Live & Monthly"
+    priority: "LOW"
+  - name: "Annual renewal discussion"
+    frequency_days: 330
+    trigger_stage: "Live & Monthly"
+    priority: "HIGH"
